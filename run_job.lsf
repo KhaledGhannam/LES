@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH --job-name=LES_base2
+#SBATCH --time=959
+#SBATCH --qos=normal
+#SBATCH --partition=batch
+#SBATCH --mail-user=Khaled.Ghannam@noaa.gov
+#SBATCH --mail-type=ALL
+#SBATCH --export=NONE
+#SBATCH --clusters=c3
+#SBATCH --nodes=12
+#SBATCH --account=cpo_landABL
+
+###ulimit -s unlimited
+### Run the executable
+srun --verbose --export=ALL --ntasks=384 --cpus-per-task=1 \
+	  /lustre/f2/dev/Khaled.Ghannam/LES/ConHet/Homogeneous/HM6/non_periodic_lagrange
+
+###if [[ $? == 0 ]]; then
+###    module load gcp
+###    gcp -v -cd ./output/aver_*.out gfdl:/archive/Khaled.Ghannam/LES/Matlab/Het/HM1/
+###fi
