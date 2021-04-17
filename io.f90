@@ -48,8 +48,7 @@ character (*), parameter :: fcumulative_time = path // 'total_time.dat'
 integer, parameter :: n_avg_stats = 5000000 !--interval for updates in avg_stats
 character (*), parameter :: end_hdr_avg = '# end header'
 
-!! --------------------------------------------------------------------
-!! The following block defines parameters for use in avgslice and scalar_slice
+
 !! --------------------------------------------------------------------
 integer,parameter :: average_dim_select_flag=1-(average_dim_num/2) 
 ! The variable average_dim_select_flag generates the following values based
@@ -185,7 +184,6 @@ use sim_param,only:path,u,v,w,dudz,dudx,p,&
      RHSx,RHSy,RHSz,theta, txx, txy, txz, tyy, tyz, tzz
 use sgsmodule,only:Cs_opt2
 use scalars_module,only:sgs_t3
-use scalars_module2,only:scalar_slice,budget_TKE_scalar
 implicit none
 real(kind=rprec),dimension(nz)::u_ndim
 character(len=20)::req
@@ -316,8 +314,7 @@ end select
 end subroutine compute_avg_var
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!--The following subroutine does the collocation of the MPI arrays for
-! averaging in avgslice and scalar_slice (in scalars_module2.f90)
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine collocate_MPI_averages(avg_var_proc,avg_var_tot_domain,file_ind)
 use param
@@ -356,9 +353,6 @@ end subroutine collocate_MPI_averages
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!--The following subroutine does the collocation of the MPI arrays for
-! averaging in avgslice and scalar_slice (in scalars_module2.f90)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine collocate_MPI_averages_N(avg_var_proc,avg_var_tot_domain,file_ind,filename_str)
 !subroutine collocate_MPI_averages(avg_var_proc,avg_var_tot_domain,file_ind)
@@ -1257,7 +1251,8 @@ subroutine checkpoint (lun)
 use param,only:nz,S_FLAG
 use sim_param,only:u,v,w,RHSx,RHSy,RHSz,theta,qmix
 use sgsmodule,only:Cs_opt2,F_LM,F_MM,F_QN,F_NN,G_LM,G_MM,G_QN,G_NN,Pr_t
-use scalars_module,only:RHS_T,sgs_t3,psi_m,psi_m0
+use scalars_module,only:RHS_T,sgs_t3
+use bottombc,only:psi_m,psi_m0,psi_h,psi_h0
 use scalars_module_q,only:RHS_q,sgs_q3
 
 implicit none
@@ -1266,7 +1261,8 @@ integer,intent(in)::lun
 if (S_FLAG) then ! WITH SCALARS
    write (lun) u(:,:,1:nz),v(:,:,1:nz),w(:,:,1:nz),theta(:,:,1:nz),   &
                qmix(:,:,1:nz),RHSx(:,:,1:nz),RHSy(:,:,1:nz),RHSz(:,:,1:nz),          &
-               RHS_T(:,:,1:nz),RHS_q(:,:,1:nz),sgs_t3(:,:,1),sgs_q3(:,:,1),psi_m,psi_m0,Cs_opt2,&
+               RHS_T(:,:,1:nz),RHS_q(:,:,1:nz),sgs_t3(:,:,1),sgs_q3(:,:,1),&
+               psi_m,psi_m0,psi_h,psi_h0,Cs_opt2,&
                F_LM,F_MM,F_QN,F_NN,G_LM,G_MM,G_QN,G_NN,Pr_t(:,:,1:nz)
 else ! No SCALARS
    write (lun) u(:,:,1:nz),v(:,:,1:nz),w(:,:,1:nz),          &

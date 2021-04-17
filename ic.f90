@@ -52,8 +52,8 @@ else
 	gam=sqrt(u_star*coriol/(10*z_i))
 	!MM for now lets ug=1
         !ug=1._rprec
-	ubar(jz)=ug_dim*(1-exp(-gam*z*z_i)*cos(gam*z*z_i))/u_star
-        vbar(jz)=ug_dim*exp(-gam*z*z_i)*sin(gam*z*z_i)/u_star
+	ubar(jz)=ug0*(1-exp(-gam*z*z_i)*cos(gam*z*z_i))/u_star
+        vbar(jz)=ug0*exp(-gam*z*z_i)*sin(gam*z*z_i)/u_star
 ! MM
 
 ! Note that ug and vg have already been non-dimensionalized in param.f90
@@ -63,7 +63,7 @@ else
         vbar(jz)=0._rprec
         end if
 
-     if ((coriolis_forcing).and.(z.gt.(.5_rprec*z_i))) ubar(jz)=ug_dim/u_star
+     if ((coriolis_forcing).and.(z.gt.(.5_rprec*z_i))) ubar(jz)=ug0/u_star
 
   end do
 

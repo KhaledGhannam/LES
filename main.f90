@@ -4,17 +4,15 @@ use param
 use sim_param
 use io,only:openfiles,output_loop,output_final,inflow_write,avg_stats
 use output_slices,only:write_slices
-!use output_slice, only: output_slice_loop
 use fft
-
 use immersedbc
 use test_filtermodule
 use topbc,only:setsponge,sponge
-use bottombc,only:num_patch,avgpatch,patches,wt_s,wq_s
+use bottombc,only:wt_s,wq_s
 use scalars_module,only:beta_scal,obukhov,theta_all_in_one,RHS_T,RHS_Tf
 use scalars_module_q,only:q_all_in_one,RHS_q,RHS_qf
 use atm_thermodynamics,only:thermo
-use scalars_module2,only:patch_or_remote,timestep_conditions
+use scalars_module2,only:timestep_conditions
 $if ($LVLSET)
   use level_set, only : level_set_init, level_set_cylinder_CD,  &
                         level_set_smooth_vel
@@ -36,26 +34,16 @@ $if ($MPI)
   integer :: ip, np, coords(1)
 $endif
 
-real(kind=rprec) rmsdivvel,ke,kestor,testu   
-real(kind=rprec),dimension(nz)::u_ndim
-! SKS
-! real(kind=rprec),dimension(ld,ny,nz)::S_hat,Pr_0
-! Dont know why these are required !
-! SKS
+real(kind=rprec),allocatable,dimension(:,:,:)::ug,vg
+real(kind=rprec):: rmsdivvel,ke,kestor,testu   
 real(kind=rprec)::const,tt,omega
-real (rprec) :: force
-real (rprec) :: ug_time_factor,ug_period1,ug_period2,ug_period3,ug_period4
+real (rprec):: force
+
 real(kind=rprec),dimension(4)::timestep_vars
  
-! SKS
 integer::counter=0,plot_count=0
-! SKS
+
 !---------------------------------------------------------------------
-
-!call read_namelist
-
-
-
 
 
 $if ($MPI)
@@ -97,10 +85,6 @@ $if ($MPI)
 
   write (chcoord, '(a,i0,a)') '(', coord, ')'  !--() make easier to use
 
-!-----------------------
-call read_namelist
-!---------------------------
-
   !--rank->coord and coord->rank conversions
   do ip = 0, np-1
     call mpi_cart_rank (comm, (/ ip /), rank_of_coord(ip), ierr)
@@ -136,15 +120,31 @@ $else
 
 $endif
 
+!-----------------------
+call read_namelist
+!---------------------------
+
+! -------- initialize time -----------
 tt=0
+!----------------------------
 
-!--only coord 0 needs to do this since at the bottom
-!--roughness information then needs to be broadcast
-!if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
+if( .not. allocated(ug)) allocate(ug(ld,ny,1:((nz-1)*nproc)))
+if( .not. allocated(vg)) allocate(vg(ld,ny,1:((nz-1)*nproc)))
+
+! Assign geostrophic winds
+Nzz=(nz-1)*nproc
+  do k=1,Nzz
+            ug(:,:,k)=ug0/u_star
+            vg(:,:,k)=vg0/u_star
+  end do
+
+! surface BCs in bottombc
 call patches ()
-!end if
+!-----------------------
 
+! initialize velocity and/or scalar fields (or read from file) in initial.f90
 call initial()
+!-----------------------------------------
 
 !--could move this into something like initial ()
 $if ($LVLSET)
@@ -166,13 +166,12 @@ call init_fft()
   call test_filter_init (2._rprec * filter_size, G_test)
 
 if (model == 3 .or. model == 5 .or. model == 6 .or. model == 7) then  !--scale dependent dynamic
-! if (model == 3 .or. model == 5) then  !--scale dependent dynamic
   call test_filter_init (4._rprec * filter_size, G_test_test)
 end if
 
 if (ubc == 1) then
     call setsponge()
-!   print *,'sponge value calculated for damping layer'
+    print *,'sponge value calculated for damping layer'
 else
     sponge=0._rprec
 end if
@@ -181,10 +180,9 @@ if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
   print *, 'Number of timesteps', nsteps
   print *, 'dt = , dt_dim = ', dt, dt_dim
   print *, 'Nx, Ny, Nz, Nz_total ', nx, ny, nz, nz_tot
-  print *, 'Lx, Ly, Lz = ', L_x, L_y, L_z
+  print *, 'Lx, Ly, Lz, Lz_total = ', L_x, L_y, L_z, L_z*nproc
   
   if (USE_MPI) print *, 'Number of processes = ', nproc
- ! print *, 'Number of patches = ', num_patch
   print *, 'sampling stats every ', c_count, ' timesteps'
   print *, 'writing stats every ', p_count, ' timesteps'
   if (molec) print*, 'molecular viscosity (dimensional) ', nu_molec
@@ -202,15 +200,6 @@ do jt=1,nsteps
   end if
 
   tt=tt+dt      ! advance total time
-
-Nzz=(nz-1)*nproc
-  do k=1,Nzz
-          ! Could also go from this way : 
-          !  k_global = k + coord*(nz-1)
-
-            ug(:,:,k)=ug_dim/u_star
-            vg(:,:,k)=0.0_rprec
-  end do
 
      RHSx_f = RHSx
      RHSy_f = RHSy
