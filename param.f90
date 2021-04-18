@@ -45,44 +45,46 @@ integer :: coord = -1  !--same here
 integer :: rank_of_coord(0:nproc-1), coord_of_rank(0:nproc-1)
 !--end mpi stuff
 
-logical,parameter::VERBOSE = .false.  !--prints small stuff to screen
-                   !--use DEBUG to write lots of data/files
-
-! -- these should be namelist parameters (default values)
-integer,protected::nx,ny,nz,nz_tot
-integer,protected::nx2, ny2, lh, ld, lh_big, ld_big
-real(kind=rprec),protected::L_x=2.0_rprec*pi, L_y=2.0_rprec*pi
-real(kind=rprec),protected::z_i=1000._rprec, L_z=3000._rprec/nproc
-integer,protected::nsteps
-logical::coriolis_forcing=.false.
-real(kind=rprec),protected::u_star=1.0_rprec
-real(kind=rprec),protected::dt_dim=0.1_rprec 
-real(kind=rprec),protected::ug0,vg0
-real(kind=rprec),protected:: dt 
-real(kind=rprec),protected::coriol 
-integer,protected::c_count=20,p_count=1000 
-integer,protected::ubc=0, damping_method=1
-real(rprec),protected::mean_p_force
-
-!--- default values. if initu and initsc are false, initialize, otherwise read from previous
-logical,protected:: initu=.true.,initsc=.true.,inilag=.false.,interp=.FALSE.
-
-real(kind=rprec),protected:: inv_strength=0.0050_rprec,dTdz_top=0.0050_rprec
-real(kind=rprec),protected :: T_scale=400._rprec,T_init=300.00_rprec ! unstable
-real(kind=rprec),protected::inv_strength_q=-0.004_rprec,dqdz_top=-0.004_rprec
-real(kind=rprec),protected :: q_init=12.00_rprec 
-real(kind=rprec) :: q_scale=100._rprec
-
-! ---- end of namelist parameters ------
-
-
-
-  ! -- MMC : Bogus is used for debugging .
+logical,parameter::VERBOSE = .false. 
 integer,parameter :: iBOGUS = -1234567890  !--NOT a new Apple product
 real(kind=rprec),parameter :: BOGUS = -1234567890._rprec
 real(kind=rprec),parameter::pi=3.1415926535897932384626433_rprec
 integer,parameter::spectraCALC=0 ! 125000
 real(rprec),parameter::Pr=0.55_rprec
+
+! -- these should be namelist parameters (default values)
+integer,parameter::nx=360,ny=288,nz=384/nproc + 1
+
+integer,parameter::nz_tot=(nz-1)*nproc + 1
+integer,parameter::nx2=3*nx/2,ny2=3*ny/2
+integer,parameter::lh=nx/2+1,ld=2*lh,lh_big=nx2/2+1,ld_big=2*lh_big
+
+real(kind=rprec),parameter::L_x=5.0_rprec*pi,L_y=4.0_rprec*pi
+real(kind=rprec),parameter::z_i=1000._rprec, L_z=3000._rprec/nproc
+real(kind=rprec),parameter::dz=L_z/z_i/(nz-1)
+real(kind=rprec),parameter::dx=L_x/nx,dy=L_y/ny
+
+integer,protected::nsteps
+logical::coriolis_forcing=.false.
+real(kind=rprec),protected::u_star=0.0_rprec
+real(kind=rprec),protected::dt_dim=0.1_rprec 
+real(kind=rprec),protected::ug0=10.0,vg0=1.0
+real(kind=rprec),protected:: dt 
+real(kind=rprec),protected::coriol 
+integer,protected::c_count,p_count
+integer,protected::ubc=0, damping_method=1
+
+
+!--- default values. if initu and initsc are false, initialize, otherwise read from previous
+logical,protected:: initu=.true.,initsc=.true.,inilag=.false.,interp=.FALSE.
+
+real(kind=rprec),protected:: inv_strength=0.0050_rprec,dTdz_top=0.0050_rprec
+real(kind=rprec),protected :: T_scale=400._rprec,T_init=283.00_rprec ! unstable
+real(kind=rprec),protected::inv_strength_q=-0.004_rprec,dqdz_top=-0.004_rprec
+real(kind=rprec),protected :: q_init=1.00_rprec 
+real(kind=rprec) :: q_scale=100._rprec
+
+! ---- end of namelist parameters ------
 
 
 real(rprec),parameter::cp=1005.0_rprec       ! specific heat capacity at constant pressure (J/kg/K)
@@ -91,8 +93,9 @@ real(rprec),parameter::Rv=461.5_rprec        ! Gas constant for water vapor (J/k
 real(rprec),parameter::Rd=287.04_rprec        ! Gas constant for dry air (J/kg/K)
 real(rprec),parameter::rho_d=1.2923_rprec      ! density of dry air (kg/m^3)
 real(rprec),parameter::rho_w=1000.0_rprec     ! water density (kg/m^3)
-real(rprec),parameter::vonk=0.41_rprec
+real(rprec),parameter::pr_surf=100000.0_rprec    ! Surface pressure (Pa)
 
+real(rprec),parameter::vonk=0.41_rprec
 
 integer, parameter :: cs_count = 5  !--tsteps between dynamic Cs updates
 logical,parameter::output=.true.
@@ -139,6 +142,7 @@ integer, parameter :: jt_start_write = 15000
 ! then the top & bottom velocities are forced to the inflow velocity
 logical, parameter :: force_top_bot = .false.
 logical, parameter :: use_mean_p_force = .false. ! .not.inflow
+real(rprec),parameter::mean_p_force = 1._rprec * z_i/L_z/nproc
 
 integer :: jt        ! global time-step counter
 integer :: jt_total  ! used for cumulative time (see io module)
@@ -181,8 +185,6 @@ namelist /param_nml/ q_scale, T_scale, &
                      inv_strength, inv_strength_q, &
                      dTdz_top, dqdz_top, &
                      T_init, q_init, &
-                     nx, ny, nz, &
-                     L_x, L_y, L_z, z_i, &
                      coriolis_forcing, nsteps, dt_dim, &
                      c_count, p_count, ubc, damping_method, &
                      initu, initsc, inilag 
@@ -190,27 +192,44 @@ namelist /param_nml/ q_scale, T_scale, &
 !--------
 contains
 ! ---------
-  subroutine read_namelist
-       
+subroutine read_namelist
+
+ implicit none
+
+!------
   integer::io1
-       
+  logical :: exst1
+  character (*), parameter :: ftotal_time = path // 'total_time.dat'
+  
+  inquire (file=ftotal_time, exist=exst1)
+  if (exst1) then
+    open (1, file=ftotal_time)
+    read (1, *) jt_total 
+    close (1)
+  else  !--assume this is the first run on cumulative time
+    write (*, *) 'file ', ftotal_time, ' not found'
+    write (*, *) 'assuming jt_total = 0'
+    jt_total = 0 
+  end if
+
+
   open (9873, file='input.nml')
   read (9873, nml=param_nml, iostat=io1)
   close(9873)
-
-  nz=nz/nproc+1
-  L_z=L_z/nproc
-  
-  nz_tot=(nz-1)*nproc + 1
-  nx2=3*nx/2
-  ny2=3*ny/2
-  lh=nx/2+1
-  ld=2*lh
-  lh_big=nx2/2+1
-  ld_big=2*lh_big
   dt=dt_dim*u_star/z_i
   coriol=1.3962634E-04*z_i/u_star
-  mean_p_force = 1._rprec * z_i/L_z/nproc
+  
+  if (jt_total .GT. 0) then
+  
+  if(coord==0) then
+  write (*, *) 'jt_total is larger than 0, reading from previous vel_sc.out'
+  end if
+  
+  initu = .true.
+  initsc = .true.
+  inilag=.false.
+  
+  end if
   
 if(coord==0) then
 write(*,  param_nml)

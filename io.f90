@@ -24,7 +24,7 @@ integer,parameter::base=50000,nwrite=base
 ! SKS
 
 logical,parameter:: io_spec=.false.,output_fields_3d_flag=.false.
-integer,parameter::spec_write_freqz=600, fields_3d_write_freqz=p_count*6
+integer,parameter::spec_write_freqz=600, fields_3d_write_freqz=6
 integer,parameter::spec_write_start=1,spec_write_end=24*base
 !! --------------------------------------------------------------------
 !! The following block defines parameters for instantaneous slice output
@@ -625,8 +625,6 @@ do k=1,Nz-1
        end if
 
 
-
-
 ! -----   Thermodynamics -----------
 
 aactual_T(1:nx,1:ny,k)=aactual_T(1:nx,1:ny,k)+fr*actual_T(1:nx,1:ny,k)*T_scale
@@ -974,200 +972,219 @@ end do
 if (mod(jt,p_count)==0) then
         allocate(avg_out(1:nx,1:ny,1:(nz_tot-1)));
 
-        call collocate_MPI_averages_SHH(au,avg_out,120,'u')
-        call collocate_MPI_averages_SHH(av,avg_out,121,'v')
-        call collocate_MPI_averages_SHH(aw,avg_out,122,'w')
-        call collocate_MPI_averages_SHH(ap,avg_out,123,'p')
-        !call collocate_MPI_averages_SHH(apf,avg_out,124,'pf')
-        call collocate_MPI_averages_SHH(atheta,avg_out,125,'theta')
-        call collocate_MPI_averages_SHH(aq,avg_out,126,'q')
-        call collocate_MPI_averages_SHH(p2,avg_out,127,'p2')
-        !call collocate_MPI_averages_SHH(pf2,avg_out,128,'pf2')
-        call collocate_MPI_averages_SHH(u2,avg_out,129,'u2')
-        call collocate_MPI_averages_SHH(v2,avg_out,130,'v2')
-        call collocate_MPI_averages_SHH(w2,avg_out,131,'w2')
-        call collocate_MPI_averages_SHH(theta2,avg_out,132,'T2')
-        call collocate_MPI_averages_SHH(q2,avg_out,133,'q2')
-        call collocate_MPI_averages_SHH(u3,avg_out,134,'u3')
-        call collocate_MPI_averages_SHH(v3,avg_out,135,'v3')
-        call collocate_MPI_averages_SHH(w3,avg_out,136,'w3')
-        call collocate_MPI_averages_SHH(q3,avg_out,137,'q3')
-        call collocate_MPI_averages_SHH(T3,avg_out,138,'T3')
-        call collocate_MPI_averages_SHH(adudx,avg_out,139,'dudx')
-        call collocate_MPI_averages_SHH(adudy,avg_out,140,'dudy')
-        call collocate_MPI_averages_SHH(adudz,avg_out,141,'dudz')
-        call collocate_MPI_averages_SHH(advdx,avg_out,142,'dvdx')
-        call collocate_MPI_averages_SHH(advdy,avg_out,143,'dvdy')
-        call collocate_MPI_averages_SHH(advdz,avg_out,144,'dvdz')
-        call collocate_MPI_averages_SHH(adwdx,avg_out,145,'dwdx')
-        call collocate_MPI_averages_SHH(adwdy,avg_out,146,'dwdy')
-        call collocate_MPI_averages_SHH(adwdz,avg_out,147,'dwdz')
-        call collocate_MPI_averages_SHH(adTdx,avg_out,148,'dTdx')
-        call collocate_MPI_averages_SHH(adTdy,avg_out,149,'dTdy')
-        call collocate_MPI_averages_SHH(adTdz,avg_out,150,'dTdz')
-        call collocate_MPI_averages_SHH(adqdx,avg_out,151,'dqdx')
-        call collocate_MPI_averages_SHH(adqdy,avg_out,152,'dqdy')
-        call collocate_MPI_averages_SHH(adqdz,avg_out,153,'dqdz')
-        call collocate_MPI_averages_SHH(adpdx,avg_out,154,'dpdx')
-        call collocate_MPI_averages_SHH(adpdy,avg_out,155,'dpdy')
-        call collocate_MPI_averages_SHH(adpdz,avg_out,156,'dpdz')
-        call collocate_MPI_averages_SHH(tke,avg_out,157,'tke')
-        call collocate_MPI_averages_SHH(awe,avg_out,158,'we')
-        call collocate_MPI_averages_SHH(aue,avg_out,159,'ue')
-        call collocate_MPI_averages_SHH(ave,avg_out,160,'ve')
-        call collocate_MPI_averages_SHH(auw,avg_out,161,'uw')
-        call collocate_MPI_averages_SHH(avw,avg_out,162,'vw')
-        call collocate_MPI_averages_SHH(awt,avg_out,163,'wt')
-        call collocate_MPI_averages_SHH(awq,avg_out,164,'wq')
-        call collocate_MPI_averages_SHH(aut,avg_out,165,'ut')
-        call collocate_MPI_averages_SHH(avt,avg_out,166,'vt')
-        call collocate_MPI_averages_SHH(auq,avg_out,167,'uq')
-        call collocate_MPI_averages_SHH(avq,avg_out,168,'vq')
-        call collocate_MPI_averages_SHH(auv,avg_out,169,'uv')
-        call collocate_MPI_averages_SHH(awuu,avg_out,170,'wuu')
-        call collocate_MPI_averages_SHH(awvv,avg_out,171,'wvv')
-        call collocate_MPI_averages_SHH(awtt,avg_out,172,'wtt')
-        call collocate_MPI_averages_SHH(awqq,avg_out,173,'wqq')
-        call collocate_MPI_averages_SHH(awwu,avg_out,174,'wwu')
-        call collocate_MPI_averages_SHH(awwv,avg_out,175,'wwv')
-        call collocate_MPI_averages_SHH(awwt,avg_out,176,'wwt')
-        call collocate_MPI_averages_SHH(awwq,avg_out,177,'wwq')
-        !call collocate_MPI_averages_SHH(pi1_t,avg_out,178,'pi1t')
-        !call collocate_MPI_averages_SHH(pi2_t,avg_out,179,'pi2t')
-        !call collocate_MPI_averages_SHH(pi3_t,avg_out,180,'pi3t')
-        !call collocate_MPI_averages_SHH(pi1_q,avg_out,181,'pi1q')
-        !call collocate_MPI_averages_SHH(pi2_q,avg_out,182,'pi2q')
-        !call collocate_MPI_averages_SHH(pi3_q,avg_out,183,'pi3q')
-        call collocate_MPI_averages_SHH(atxx,avg_out,184,'txx')
-        call collocate_MPI_averages_SHH(atxy,avg_out,185,'txy')
-        call collocate_MPI_averages_SHH(atxz,avg_out,186,'txz')
-        call collocate_MPI_averages_SHH(atyy,avg_out,187,'tyy')
-        call collocate_MPI_averages_SHH(atyz,avg_out,188,'tyz')
-        call collocate_MPI_averages_SHH(atzz,avg_out,189,'tzz')
-        call collocate_MPI_averages_SHH(aup,avg_out,190,'up')
-        call collocate_MPI_averages_SHH(avp,avg_out,191,'vp')
-        call collocate_MPI_averages_SHH(awp,avg_out,192,'wp')
-        call collocate_MPI_averages_SHH(atp,avg_out,193,'tp')
-        call collocate_MPI_averages_SHH(aqp,avg_out,194,'qp')
-        call collocate_MPI_averages_SHH(atq,avg_out,195,'tq')
-        call collocate_MPI_averages_SHH(aupx,avg_out,196,'upx')
-        call collocate_MPI_averages_SHH(aupy,avg_out,197,'upy')
-        call collocate_MPI_averages_SHH(aupz,avg_out,198,'upz')
-        call collocate_MPI_averages_SHH(avpx,avg_out,199,'vpx')
-        call collocate_MPI_averages_SHH(avpy,avg_out,200,'vpy')
-        call collocate_MPI_averages_SHH(avpz,avg_out,201,'vpz')
-        call collocate_MPI_averages_SHH(awpx,avg_out,202,'wpx')
-        call collocate_MPI_averages_SHH(awpy,avg_out,203,'wpy')
-        call collocate_MPI_averages_SHH(awpz,avg_out,204,'wpz')
-        call collocate_MPI_averages_SHH(at11ux,avg_out,205,'t11ux')
-        call collocate_MPI_averages_SHH(at12uy,avg_out,206,'t12uy')
-        call collocate_MPI_averages_SHH(at13uz,avg_out,207,'t13uz')
-        call collocate_MPI_averages_SHH(at21vx,avg_out,208,'t21vx')
-        call collocate_MPI_averages_SHH(at22vy,avg_out,209,'t22vy')
-        call collocate_MPI_averages_SHH(at23vz,avg_out,210,'t23vz')
-        call collocate_MPI_averages_SHH(at31wx,avg_out,211,'t31wx')
-        call collocate_MPI_averages_SHH(at32wy,avg_out,212,'t32wy')
-        call collocate_MPI_averages_SHH(at33wz,avg_out,213,'t33wz')
-        call collocate_MPI_averages_SHH(apux,avg_out,214,'pux')
-        call collocate_MPI_averages_SHH(apuy,avg_out,215,'puy')
-        call collocate_MPI_averages_SHH(apuz,avg_out,216,'puz')
-        call collocate_MPI_averages_SHH(apvx,avg_out,217,'pvx')
-        call collocate_MPI_averages_SHH(apvy,avg_out,218,'pvy')
-        call collocate_MPI_averages_SHH(apvz,avg_out,219,'pvz')
-        call collocate_MPI_averages_SHH(apwx,avg_out,220,'pwx')
-        call collocate_MPI_averages_SHH(apwy,avg_out,221,'pwy')
-        call collocate_MPI_averages_SHH(apwz,avg_out,222,'pwz')
-        call collocate_MPI_averages_SHH(aptx,avg_out,223,'ptx')
-        call collocate_MPI_averages_SHH(apty,avg_out,224,'pty')
-        call collocate_MPI_averages_SHH(aptz,avg_out,225,'ptz')
-        call collocate_MPI_averages_SHH(apqx,avg_out,226,'pqx')
-        call collocate_MPI_averages_SHH(apqy,avg_out,227,'pqy')
-        call collocate_MPI_averages_SHH(apqz,avg_out,228,'pqz')
-        call collocate_MPI_averages_SHH(at11s11,avg_out,229,'t11s11')
-        call collocate_MPI_averages_SHH(at12s12,avg_out,230,'t12s12')
-        call collocate_MPI_averages_SHH(at13s13,avg_out,231,'t13s13')
-        call collocate_MPI_averages_SHH(at22s22,avg_out,232,'t22s22')
-        call collocate_MPI_averages_SHH(at23s23,avg_out,233,'t23s23')
-        call collocate_MPI_averages_SHH(at33s33,avg_out,234,'t33s33')
-        !call collocate_MPI_averages_SHH(api1_tx,avg_out,235,'pi1_tx')
-        !call collocate_MPI_averages_SHH(api2_ty,avg_out,236,'pi2_ty')
-        !call collocate_MPI_averages_SHH(api3_tz,avg_out,237,'pi3_tz')
-        !call collocate_MPI_averages_SHH(api1_qx,avg_out,238,'pi1_qx')
-        !call collocate_MPI_averages_SHH(api2_qy,avg_out,239,'pi2_qy')
-        !call collocate_MPI_averages_SHH(api3_qz,avg_out,240,'pi3_qz')
-        call collocate_MPI_averages_SHH(as11,avg_out,241,'s11')
-        call collocate_MPI_averages_SHH(as12,avg_out,242,'s12')
-        call collocate_MPI_averages_SHH(as13,avg_out,243,'s13')
-        call collocate_MPI_averages_SHH(as22,avg_out,244,'s22')
-        call collocate_MPI_averages_SHH(as23,avg_out,245,'s23')
-        call collocate_MPI_averages_SHH(as33,avg_out,246,'s33')
-        call collocate_MPI_averages_SHH(aut11,avg_out,247,'ut11')
-        call collocate_MPI_averages_SHH(aut12,avg_out,248,'ut12')
-        call collocate_MPI_averages_SHH(aut13,avg_out,249,'ut13')
-        call collocate_MPI_averages_SHH(avt21,avg_out,250,'vt21')
-        call collocate_MPI_averages_SHH(avt22,avg_out,251,'vt22')
-        call collocate_MPI_averages_SHH(avt23,avg_out,252,'vt23')
-        call collocate_MPI_averages_SHH(awt31,avg_out,253,'wt31')
-        call collocate_MPI_averages_SHH(awt32,avg_out,254,'wt32')
-        call collocate_MPI_averages_SHH(awt33,avg_out,255,'wt33')
-        !call collocate_MPI_averages_SHH(asgst1,avg_out,256,'sgst1')
-        !call collocate_MPI_averages_SHH(asgst2,avg_out,257,'sgst2')
-        call collocate_MPI_averages_SHH(asgst3,avg_out,258,'sgst3')
-        !call collocate_MPI_averages_SHH(asgsq1,avg_out,259,'sgsq1')
-        !call collocate_MPI_averages_SHH(asgsq2,avg_out,260,'sgsq2')
-        call collocate_MPI_averages_SHH(asgsq3,avg_out,261,'sgsq3')
-        !call collocate_MPI_averages_SHH(auw1,avg_out,262,'uw1')
-        !call collocate_MPI_averages_SHH(auw2,avg_out,263,'uw2')
-        !call collocate_MPI_averages_SHH(auw3,avg_out,264,'uw3')
-        !call collocate_MPI_averages_SHH(auw4,avg_out,265,'uw4')
-        !call collocate_MPI_averages_SHH(awt1,avg_out,266,'wt1')
-        !call collocate_MPI_averages_SHH(awt2,avg_out,267,'wt2')
-        !call collocate_MPI_averages_SHH(awt3,avg_out,268,'wt3')
-        !call collocate_MPI_averages_SHH(awt4,avg_out,269,'wt4')
-        !call collocate_MPI_averages_SHH(awq1,avg_out,270,'wq1')
-        !call collocate_MPI_averages_SHH(awq2,avg_out,271,'wq2')
-        !call collocate_MPI_averages_SHH(awq3,avg_out,272,'wq3')
-        !call collocate_MPI_averages_SHH(awq4,avg_out,273,'wq4')
-        !call collocate_MPI_averages_SHH(atpx,avg_out,274,'tpx')
-        !call collocate_MPI_averages_SHH(atpy,avg_out,275,'tpy')
-        !call collocate_MPI_averages_SHH(atpz,avg_out,276,'tpz')
-        call collocate_MPI_averages_SHH(aactual_T,avg_out,277,'actual_T')
-        call collocate_MPI_averages_SHH(aactual_Tv,avg_out,278,'actual_Tv')
-        call collocate_MPI_averages_SHH(apr_atm,avg_out,279,'pr_atm')
-        call collocate_MPI_averages_SHH(arel_hum,avg_out,280,'rel_hum')
-        call collocate_MPI_averages_SHH(arel_hum_q,avg_out,281,'rel_hum_q')
-        call collocate_MPI_averages_SHH(avapor_pr,avg_out,282,'vapor_pr')
-        call collocate_MPI_averages_SHH(asat_vapor_pr,avg_out,283,'sat_vapor_pr')
-        call collocate_MPI_averages_SHH(asat_qmix,avg_out,284,'sat_qmix')
-        call collocate_MPI_averages_SHH(azlcl_all,avg_out,285,'zlcl_all')
-        !call collocate_MPI_averages_SHH(avw1,avg_out,286,'vw1')
-        !call collocate_MPI_averages_SHH(avw2,avg_out,287,'vw2')
-        !call collocate_MPI_averages_SHH(avw3,avg_out,288,'vw3')
-        !call collocate_MPI_averages_SHH(avw4,avg_out,289,'vw4')
-        !call collocate_MPI_averages_SHH(aqpx,avg_out,290,'qpx')
-        !call collocate_MPI_averages_SHH(aqpy,avg_out,291,'qpy')
-        !call collocate_MPI_averages_SHH(aqpz,avg_out,292,'qpz')
-
+        call collocate_MPI_averages_SHH2(au,avg_out,120,'u')
+        call collocate_MPI_averages_SHH2(av,avg_out,121,'v')
+        call collocate_MPI_averages_SHH2(aw,avg_out,122,'w')
+        call collocate_MPI_averages_SHH2(atheta,avg_out,125,'theta')
+        call collocate_MPI_averages_SHH2(aq,avg_out,126,'q')
+        call collocate_MPI_averages_SHH2(u2,avg_out,129,'u2')
+        call collocate_MPI_averages_SHH2(v2,avg_out,130,'v2')
+        call collocate_MPI_averages_SHH2(w2,avg_out,131,'w2')
+        call collocate_MPI_averages_SHH2(theta2,avg_out,132,'T2')
+        call collocate_MPI_averages_SHH2(q2,avg_out,133,'q2')
+        call collocate_MPI_averages_SHH2(auw,avg_out,161,'uw')
+        call collocate_MPI_averages_SHH2(avw,avg_out,162,'vw')
+        call collocate_MPI_averages_SHH2(awt,avg_out,163,'wt')
+        call collocate_MPI_averages_SHH2(awq,avg_out,164,'wq')
+        call collocate_MPI_averages_SHH2(atxz,avg_out,186,'txz')
+        call collocate_MPI_averages_SHH2(atyz,avg_out,188,'tyz')
+        call collocate_MPI_averages_SHH2(asgst3,avg_out,258,'sgst3')
+        call collocate_MPI_averages_SHH2(asgsq3,avg_out,261,'sgsq3')
+        
         deallocate(avg_out)
+        
+        !!VK Zero out the outputted averages !!
+
+          au=0._rprec;av=0._rprec;aw=0._rprec;
+          atheta=0._rprec;
+        aq=0._rprec; u2=0._rprec;v2=0._rprec;
+        w2=0._rprec;theta2=0._rprec; q2=0._rprec;
+         auw=0._rprec;avw=0._rprec;awt=0._rprec;awq=0._rprec;
+         atxz=0._rprec; atyz=0._rprec;
+        asgst3=0._rprec;asgsq3=0._rprec;
+        arg1=0._rprec;arg2=0._rprec;arg3=0._rprec;
+        arg7=0._rprec;arg8=0._rprec;
+
+end if
+
+          
+if (mod(jt,3*p_count)==0) then
+        allocate(avg_out(1:nx,1:ny,1:(nz_tot-1))); 
+        
+        call collocate_MPI_averages_SHH2(ap,avg_out,123,'p')
+        call collocate_MPI_averages_SHH2(p2,avg_out,127,'p2')
+        call collocate_MPI_averages_SHH2(u3,avg_out,134,'u3')
+        call collocate_MPI_averages_SHH2(v3,avg_out,135,'v3')
+        call collocate_MPI_averages_SHH2(w3,avg_out,136,'w3')
+        call collocate_MPI_averages_SHH2(q3,avg_out,137,'q3')
+        call collocate_MPI_averages_SHH2(T3,avg_out,138,'T3')
+        call collocate_MPI_averages_SHH2(adudx,avg_out,139,'dudx')
+        call collocate_MPI_averages_SHH2(adudy,avg_out,140,'dudy')
+        call collocate_MPI_averages_SHH2(adudz,avg_out,141,'dudz')
+        call collocate_MPI_averages_SHH2(advdx,avg_out,142,'dvdx')
+        call collocate_MPI_averages_SHH2(advdy,avg_out,143,'dvdy')
+        call collocate_MPI_averages_SHH2(advdz,avg_out,144,'dvdz')
+        call collocate_MPI_averages_SHH2(adwdx,avg_out,145,'dwdx')
+        call collocate_MPI_averages_SHH2(adwdy,avg_out,146,'dwdy')
+        call collocate_MPI_averages_SHH2(adwdz,avg_out,147,'dwdz')
+        call collocate_MPI_averages_SHH2(adTdx,avg_out,148,'dTdx')
+        call collocate_MPI_averages_SHH2(adTdy,avg_out,149,'dTdy')
+        call collocate_MPI_averages_SHH2(adTdz,avg_out,150,'dTdz')
+        call collocate_MPI_averages_SHH2(adqdx,avg_out,151,'dqdx')
+        call collocate_MPI_averages_SHH2(adqdy,avg_out,152,'dqdy')
+        call collocate_MPI_averages_SHH2(adqdz,avg_out,153,'dqdz')
+        call collocate_MPI_averages_SHH2(adpdx,avg_out,154,'dpdx')
+        call collocate_MPI_averages_SHH2(adpdy,avg_out,155,'dpdy')
+        call collocate_MPI_averages_SHH2(adpdz,avg_out,156,'dpdz')
+        call collocate_MPI_averages_SHH2(tke,avg_out,157,'tke')
+        call collocate_MPI_averages_SHH2(awe,avg_out,158,'we')
+        call collocate_MPI_averages_SHH2(aue,avg_out,159,'ue')
+        call collocate_MPI_averages_SHH2(ave,avg_out,160,'ve')
+
+        call collocate_MPI_averages_SHH2(aut,avg_out,165,'ut')
+        call collocate_MPI_averages_SHH2(avt,avg_out,166,'vt')
+        call collocate_MPI_averages_SHH2(auq,avg_out,167,'uq')
+        call collocate_MPI_averages_SHH2(avq,avg_out,168,'vq')
+        call collocate_MPI_averages_SHH2(auv,avg_out,169,'uv')
+        call collocate_MPI_averages_SHH2(awuu,avg_out,170,'wuu')
+        call collocate_MPI_averages_SHH2(awvv,avg_out,171,'wvv')
+        call collocate_MPI_averages_SHH2(awtt,avg_out,172,'wtt')
+        call collocate_MPI_averages_SHH2(awqq,avg_out,173,'wqq')
+        call collocate_MPI_averages_SHH2(awwu,avg_out,174,'wwu')
+        call collocate_MPI_averages_SHH2(awwv,avg_out,175,'wwv')
+        call collocate_MPI_averages_SHH2(awwt,avg_out,176,'wwt')
+        call collocate_MPI_averages_SHH2(awwq,avg_out,177,'wwq')
+        !call collocate_MPI_averages_SHH2(pi1_t,avg_out,178,'pi1t')
+        !call collocate_MPI_averages_SHH2(pi2_t,avg_out,179,'pi2t')
+        !call collocate_MPI_averages_SHH2(pi3_t,avg_out,180,'pi3t')
+        !call collocate_MPI_averages_SHH2(pi1_q,avg_out,181,'pi1q')
+        !call collocate_MPI_averages_SHH2(pi2_q,avg_out,182,'pi2q')
+        !call collocate_MPI_averages_SHH2(pi3_q,avg_out,183,'pi3q')
+        call collocate_MPI_averages_SHH2(atxx,avg_out,184,'txx')
+        call collocate_MPI_averages_SHH2(atxy,avg_out,185,'txy')
+        call collocate_MPI_averages_SHH2(atyy,avg_out,187,'tyy')
+        call collocate_MPI_averages_SHH2(atzz,avg_out,189,'tzz')
+        call collocate_MPI_averages_SHH2(aup,avg_out,190,'up')
+        call collocate_MPI_averages_SHH2(avp,avg_out,191,'vp')
+        call collocate_MPI_averages_SHH2(awp,avg_out,192,'wp')
+        call collocate_MPI_averages_SHH2(atp,avg_out,193,'tp')
+        call collocate_MPI_averages_SHH2(aqp,avg_out,194,'qp')
+        call collocate_MPI_averages_SHH2(atq,avg_out,195,'tq')
+        call collocate_MPI_averages_SHH2(aupx,avg_out,196,'upx')
+        call collocate_MPI_averages_SHH2(aupy,avg_out,197,'upy')
+        call collocate_MPI_averages_SHH2(aupz,avg_out,198,'upz')
+        call collocate_MPI_averages_SHH2(avpx,avg_out,199,'vpx')
+        call collocate_MPI_averages_SHH2(avpy,avg_out,200,'vpy')
+        call collocate_MPI_averages_SHH2(avpz,avg_out,201,'vpz')
+        call collocate_MPI_averages_SHH2(awpx,avg_out,202,'wpx')
+        call collocate_MPI_averages_SHH2(awpy,avg_out,203,'wpy')
+        call collocate_MPI_averages_SHH2(awpz,avg_out,204,'wpz')
+        call collocate_MPI_averages_SHH2(at11ux,avg_out,205,'t11ux')
+        call collocate_MPI_averages_SHH2(at12uy,avg_out,206,'t12uy')
+        call collocate_MPI_averages_SHH2(at13uz,avg_out,207,'t13uz')
+        call collocate_MPI_averages_SHH2(at21vx,avg_out,208,'t21vx')
+        call collocate_MPI_averages_SHH2(at22vy,avg_out,209,'t22vy')
+        call collocate_MPI_averages_SHH2(at23vz,avg_out,210,'t23vz')
+        call collocate_MPI_averages_SHH2(at31wx,avg_out,211,'t31wx')
+        call collocate_MPI_averages_SHH2(at32wy,avg_out,212,'t32wy')
+        call collocate_MPI_averages_SHH2(at33wz,avg_out,213,'t33wz')
+        call collocate_MPI_averages_SHH2(apux,avg_out,214,'pux')
+        call collocate_MPI_averages_SHH2(apuy,avg_out,215,'puy')
+        call collocate_MPI_averages_SHH2(apuz,avg_out,216,'puz')
+        call collocate_MPI_averages_SHH2(apvx,avg_out,217,'pvx')
+        call collocate_MPI_averages_SHH2(apvy,avg_out,218,'pvy')
+        call collocate_MPI_averages_SHH2(apvz,avg_out,219,'pvz')
+        call collocate_MPI_averages_SHH2(apwx,avg_out,220,'pwx')
+        call collocate_MPI_averages_SHH2(apwy,avg_out,221,'pwy')
+        call collocate_MPI_averages_SHH2(apwz,avg_out,222,'pwz')
+        call collocate_MPI_averages_SHH2(aptx,avg_out,223,'ptx')
+        call collocate_MPI_averages_SHH2(apty,avg_out,224,'pty')
+        call collocate_MPI_averages_SHH2(aptz,avg_out,225,'ptz')
+        call collocate_MPI_averages_SHH2(apqx,avg_out,226,'pqx')
+        call collocate_MPI_averages_SHH2(apqy,avg_out,227,'pqy')
+        call collocate_MPI_averages_SHH2(apqz,avg_out,228,'pqz')
+        call collocate_MPI_averages_SHH2(at11s11,avg_out,229,'t11s11')
+        call collocate_MPI_averages_SHH2(at12s12,avg_out,230,'t12s12')
+        call collocate_MPI_averages_SHH2(at13s13,avg_out,231,'t13s13')
+        call collocate_MPI_averages_SHH2(at22s22,avg_out,232,'t22s22')
+        call collocate_MPI_averages_SHH2(at23s23,avg_out,233,'t23s23')
+        call collocate_MPI_averages_SHH2(at33s33,avg_out,234,'t33s33')
+        !call collocate_MPI_averages_SHH2(api1_tx,avg_out,235,'pi1_tx')
+        !call collocate_MPI_averages_SHH2(api2_ty,avg_out,236,'pi2_ty')
+        !call collocate_MPI_averages_SHH2(api3_tz,avg_out,237,'pi3_tz')
+        !call collocate_MPI_averages_SHH2(api1_qx,avg_out,238,'pi1_qx')
+        !call collocate_MPI_averages_SHH2(api2_qy,avg_out,239,'pi2_qy')
+        !call collocate_MPI_averages_SHH2(api3_qz,avg_out,240,'pi3_qz')
+        call collocate_MPI_averages_SHH2(as11,avg_out,241,'s11')
+        call collocate_MPI_averages_SHH2(as12,avg_out,242,'s12')
+        call collocate_MPI_averages_SHH2(as13,avg_out,243,'s13')
+        call collocate_MPI_averages_SHH2(as22,avg_out,244,'s22')
+        call collocate_MPI_averages_SHH2(as23,avg_out,245,'s23')
+        call collocate_MPI_averages_SHH2(as33,avg_out,246,'s33')
+        call collocate_MPI_averages_SHH2(aut11,avg_out,247,'ut11')
+        call collocate_MPI_averages_SHH2(aut12,avg_out,248,'ut12')
+        call collocate_MPI_averages_SHH2(aut13,avg_out,249,'ut13')
+        call collocate_MPI_averages_SHH2(avt21,avg_out,250,'vt21')
+        call collocate_MPI_averages_SHH2(avt22,avg_out,251,'vt22')
+        call collocate_MPI_averages_SHH2(avt23,avg_out,252,'vt23')
+        call collocate_MPI_averages_SHH2(awt31,avg_out,253,'wt31')
+        call collocate_MPI_averages_SHH2(awt32,avg_out,254,'wt32')
+        call collocate_MPI_averages_SHH2(awt33,avg_out,255,'wt33')
+        !call collocate_MPI_averages_SHH2(asgst1,avg_out,256,'sgst1')
+        !call collocate_MPI_averages_SHH2(asgst2,avg_out,257,'sgst2')
+
+        !call collocate_MPI_averages_SHH2(auw1,avg_out,262,'uw1')
+        !call collocate_MPI_averages_SHH2(auw2,avg_out,263,'uw2')
+        !call collocate_MPI_averages_SHH2(auw3,avg_out,264,'uw3')
+        !call collocate_MPI_averages_SHH2(auw4,avg_out,265,'uw4')
+        !call collocate_MPI_averages_SHH2(awt1,avg_out,266,'wt1')
+        !call collocate_MPI_averages_SHH2(awt2,avg_out,267,'wt2')
+        !call collocate_MPI_averages_SHH2(awt3,avg_out,268,'wt3')
+        !call collocate_MPI_averages_SHH2(awt4,avg_out,269,'wt4')
+        !call collocate_MPI_averages_SHH2(awq1,avg_out,270,'wq1')
+        !call collocate_MPI_averages_SHH2(awq2,avg_out,271,'wq2')
+        !call collocate_MPI_averages_SHH2(awq3,avg_out,272,'wq3')
+        !call collocate_MPI_averages_SHH2(awq4,avg_out,273,'wq4')
+        !call collocate_MPI_averages_SHH2(atpx,avg_out,274,'tpx')
+        !call collocate_MPI_averages_SHH2(atpy,avg_out,275,'tpy')
+        !call collocate_MPI_averages_SHH2(atpz,avg_out,276,'tpz')
+        call collocate_MPI_averages_SHH2(aactual_T,avg_out,277,'actual_T')
+        call collocate_MPI_averages_SHH2(aactual_Tv,avg_out,278,'actual_Tv')
+        call collocate_MPI_averages_SHH2(apr_atm,avg_out,279,'pr_atm')
+        call collocate_MPI_averages_SHH2(arel_hum,avg_out,280,'rel_hum')
+        call collocate_MPI_averages_SHH2(arel_hum_q,avg_out,281,'rel_hum_q')
+        call collocate_MPI_averages_SHH2(avapor_pr,avg_out,282,'vapor_pr')
+        call collocate_MPI_averages_SHH2(asat_vapor_pr,avg_out,283,'sat_vapor_pr')
+        call collocate_MPI_averages_SHH2(asat_qmix,avg_out,284,'sat_qmix')
+        call collocate_MPI_averages_SHH2(azlcl_all,avg_out,285,'zlcl_all')
+        !call collocate_MPI_averages_SHH2(avw1,avg_out,286,'vw1')
+        !call collocate_MPI_averages_SHH2(avw2,avg_out,287,'vw2')
+        !call collocate_MPI_averages_SHH2(avw3,avg_out,288,'vw3')
+        !call collocate_MPI_averages_SHH2(avw4,avg_out,289,'vw4')
+        !call collocate_MPI_averages_SHH2(aqpx,avg_out,290,'qpx')
+        !call collocate_MPI_averages_SHH2(aqpy,avg_out,291,'qpy')
+        !call collocate_MPI_averages_SHH2(aqpz,avg_out,292,'qpz')
+
+     
+     
+     deallocate(avg_out)
 !
 !!VK Zero out the outputted averages !!
 
-au=0._rprec;av=0._rprec;aw=0._rprec;ap=0._rprec;
-         !apf=0._rprec;atheta=0._rprec;
-         atheta=0._rprec;
-        aq=0._rprec; p2=0._rprec; u2=0._rprec;v2=0._rprec;
+ap=0._rprec;
+        p2=0._rprec; 
        ! pf2=0._rprec;
-        w2=0._rprec;theta2=0._rprec; q2=0._rprec;u3=0._rprec;v3=0._rprec;w3=0._rprec;
+        u3=0._rprec;v3=0._rprec;w3=0._rprec;
         q3=0._rprec; T3=0._rprec;adudx=0._rprec;adudy=0._rprec;adudz=0._rprec;
         advdx=0._rprec;advdy=0._rprec;advdz=0._rprec;adwdx=0._rprec;adwdy=0._rprec;adwdz=0._rprec;
         adTdx=0._rprec;adTdy=0._rprec;adTdz=0._rprec;adqdx=0._rprec;adqdy=0._rprec;adqdz=0._rprec;
          adpdx=0._rprec;adpdy=0._rprec;adpdz=0._rprec;tke=0._rprec;awe=0._rprec;aue=0._rprec;ave=0._rprec;
-         auw=0._rprec;avw=0._rprec;awt=0._rprec;awq=0._rprec;aut=0._rprec;avt=0._rprec;auq=0._rprec;
+         aut=0._rprec;avt=0._rprec;auq=0._rprec;
          avq=0._rprec;auv=0._rprec;awuu=0._rprec;awvv=0._rprec;awqq=0._rprec;awtt=0._rprec;awwu=0._rprec;
          awwv=0._rprec;awwt=0._rprec;awwq=0._rprec;
          !pi1_t=0._rprec;pi2_t=0._rprec;pi3_t=0._rprec;
          !pi1_q=0._rprec;pi2_q=0._rprec;pi3_q=0._rprec;
-         atxx=0._rprec;atxz=0._rprec;atyy=0._rprec;atyz=0._rprec
+         atxx=0._rprec;atyy=0._rprec;
         atzz=0._rprec;aup=0._rprec;avp=0._rprec;awp=0._rprec;atp=0._rprec;aqp=0._rprec;atq=0._rprec;
         aupx=0._rprec;aupy=0._rprec;aupz=0._rprec;avpx=0._rprec;avpy=0._rprec;avpz=0._rprec;
         awpx=0._rprec;awpy=0._rprec;awpz=0._rprec;
@@ -1185,7 +1202,7 @@ au=0._rprec;av=0._rprec;aw=0._rprec;ap=0._rprec;
         aut11=0._rprec;aut12=0._rprec;aut13=0._rprec;avt21=0._rprec;avt22=0._rprec;avt23=0._rprec;
         awt31=0._rprec;awt32=0._rprec;awt33=0._rprec;
         !asgst1=0._rprec;asgst2=0._rprec;asgst3=0._rprec;asgsq1=0._rprec;asgsq2=0._rprec;asgsq3=0._rprec;
-        asgst3=0._rprec;asgsq3=0._rprec;
+        
         arg1=0._rprec;arg2=0._rprec;arg3=0._rprec;arg4=0._rprec;arg4f=0._rprec;arg5=0._rprec;arg6=0._rprec;
         arg7=0._rprec;arg8=0._rprec;arg9=0._rprec;arg10=0._rprec;arg11=0._rprec;
         arg12=0._rprec;ux=0._rprec;uy=0._rprec;uz=0._rprec;vx=0._rprec;vy=0._rprec;
@@ -1197,6 +1214,7 @@ au=0._rprec;av=0._rprec;aw=0._rprec;ap=0._rprec;
 
 end if
 5168     format(1400(E15.6))
+
 end subroutine MM_XYZ_Out
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !--The following subroutine does the collocation of the MPI arrays for
@@ -1244,6 +1262,53 @@ end subroutine collocate_MPI_averages_SHH
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!--The following subroutine does the collocation of the MPI arrays for
+! SHHOutput Subroutine
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine collocate_MPI_averages_SHH2(avg_var_proc,avg_var_tot_domain,file_ind,filename_str)
+!subroutine collocate_MPI_averages(avg_var_proc,avg_var_tot_domain,file_ind)
+use param
+$if ($MPI)
+  integer :: recvcounts(nproc)
+  integer :: displs(nproc)
+$endif
+integer :: ind1,ind2,ind3,file_ind
+character (*),intent(in) :: filename_str
+character (len=256) :: local_filename
+real(kind=rprec),dimension(nx,ny,nz-1)::avg_var_proc
+real(kind=rprec),dimension(nx,ny,nz_tot-1)::avg_var_tot_domain
+
+local_filename=path//'output/aver_'//trim(filename_str)//'.out'
+
+avg_var_tot_domain=0._rprec
+$if ($MPI)
+  recvcounts = size (avg_var_proc)
+  displs = coord_of_rank * recvcounts
+  call mpi_gatherv (avg_var_proc(1,1,1), size (avg_var_proc), MPI_RPREC,       &
+                    avg_var_tot_domain(1,1,1), recvcounts, displs, MPI_RPREC, &
+                    rank_of_coord(0), comm, ierr)
+$else
+  avg_var_tot_domain=avg_var_proc
+$endif
+
+  if((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
+        open(file_ind,file=trim(local_filename),status="unknown",position="append")
+           do ind3=1,192
+           do ind2=1,ny
+            write(file_ind,5168)jt*dt,(avg_var_tot_domain(ind1,ind2,ind3),ind1=1,nx)
+           end do
+           end do
+        close(file_ind)
+  end if
+
+
+5168     format(1400(E14.5))
+end subroutine collocate_MPI_averages_SHH2
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 !--assumes lun is open and positioned correctly
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine checkpoint (lun)

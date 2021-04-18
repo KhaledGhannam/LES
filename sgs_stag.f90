@@ -108,7 +108,11 @@ if (sgs) then!ref01
    
      l = delta  ! constant equal to delta
      if ((jt == 1) .and. (inilag)) then !ref05
+
+       if (coord == 0) then
        print *,'CS_opt2 initialiazed'
+       end if
+
        Cs_opt2 = 0.03_rprec
 
     ! make sure that the "node conventions" in these dynamic models

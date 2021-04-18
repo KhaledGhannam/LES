@@ -8,7 +8,7 @@ use fft
 use immersedbc
 use test_filtermodule
 use topbc,only:setsponge,sponge
-use bottombc,only:wt_s,wq_s
+use bottombc,only:wt_s,wq_s,patches
 use scalars_module,only:beta_scal,obukhov,theta_all_in_one,RHS_T,RHS_Tf
 use scalars_module_q,only:q_all_in_one,RHS_q,RHS_qf
 use atm_thermodynamics,only:thermo
@@ -171,8 +171,16 @@ end if
 
 if (ubc == 1) then
     call setsponge()
+    
+    if (coord == 0) then
     print *,'sponge value calculated for damping layer'
+    end if
 else
+
+    if (coord == 0) then
+    print *,'No sponge set'
+    end if
+    
     sponge=0._rprec
 end if
 
@@ -486,7 +494,7 @@ do jt=1,nsteps
 !-------------------------------------------------
 
 
-    if ((jt_total .GE. 80000) .AND. (jt_total .LE. 100000) .AND. modulo (jt, 20) == 0) then
+    if ((jt_total .GE. 100000) .AND. (jt_total .LE. 120000) .AND. modulo (jt, 20) == 0) then
 
             call write_slices()
 

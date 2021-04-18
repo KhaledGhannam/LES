@@ -45,8 +45,6 @@ integer, parameter:: wt_s_vector_dim1=no_days*86400/300+1
 real(kind=rprec),dimension(wt_s_vector_dim1,1) :: wt_s_vector
 ! Variables for heterogeneity analysis
 ! hetero_array_freqz = number of time steps equivalent to 20 seconds
-integer,parameter:: hetero_array_freqz=int(20/dt_dim),hetero_count_out=p_count
-integer,save::time_ind
 
 !--MM 2015: Added Artificially Moving(Heating) Inversion:
 integer, parameter :: nz_global = (nz-1) * nproc
@@ -250,7 +248,7 @@ real(kind=rprec),dimension(ld_big,ny2,$lbz:nz):: u_m,v_m,w_m,dsdx_m,dsdy_m,dsdz_
  real(kind=rprec),dimension(ld_big,ny2,$lbz:nz):: RHS_m
 real(kind=rprec),dimension(nx,ny):: ustar_local,S_Surf,surf_flux,z_os,wt_s2,surf_flux_current
 real(kind=rprec),dimension(ld,ny):: scalar_node_1 ! test filtered and used for computing surface flux
-real(kind=rprec),dimension (ptypes):: ustar
+
 character (64) :: fname_hetero
 
 if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
@@ -519,6 +517,7 @@ integer:: jx,jy,i
 real(kind=rprec), dimension(ld,ny):: wt_avg,wq_avg,theta_avg,u1,v1
 real(kind=rprec), dimension(nx,ny):: x,x0,x0s,zeta,zeta0,zeta0s,u_avg
 real(kind=rprec):: g_,wt_,wq_,ustar_,theta_,L_,zo_,wstar_avg
+real(kind=rprec)::ustar_time, q_time, theta_time, theta_v_time
 real(kind=rprec),save:: obuk_L,obuk_ustar,obuk_phi_m,obuk_phi_h,obuk_psi_m   
 real(kind=rprec),save:: obuk_wt_sfc,obuk_psi_h,obuk_zo,obuk_wstar   
 
@@ -647,8 +646,13 @@ end if
   end do
 
   L_=-(ustar_**3)/(vonk*(g_/theta_)*wt_)
-  wstar_avg=sign((g_/theta_*abs(wt_))**(1./3.),wt_)
-
+  wstar_avg=sign((g_/theta_*abs(wt_))**(1.0/3.0),wt_)
+  ustar_time= ((sum(txz(1:nx,1:ny,1))/float(nx*ny))**2 + &
+                    (sum(tyz(1:nx,1:ny,1))/float(nx*ny))**2)**(0.25)
+  theta_time = sum(theta(1:nx,1:ny,1))/float(nx*ny)
+  theta_v_time = theta_
+  q_time = sum(qmix(1:nx,1:ny,1))/float(nx*ny)
+  
 ! SKS
   if (mod(jt,100) == 0) then     ! 100 because wbase = 100
 
@@ -662,9 +666,16 @@ end if
 
 !-------------------- OUTPUT ------------------------------
 ! Output the heat flux time series to a file to be used later
-!    open (unit=47,file=path//'output/WT_sfc_tseries.out',status="unknown",position="append")
-!    write(47,5168) (jt_total+1)*dt,wt_
- !   close(47)
+
+if (mod(jt,c_count)==0) then 
+ open (unit=9334,file=path//'output/tseries.out',status="unknown",position="append")
+    write(9334,5168) (jt_total+1)*dt, L_*z_i, wstar_avg*u_star, ustar_time*u_star, &
+                          theta_time*T_scale, theta_v_time*T_scale, q_time*q_scale
+    close(9334)
+    
+    end if
+    
+5168     format(1400(E15.6))
 !----------------------------------------------------------
 
   return

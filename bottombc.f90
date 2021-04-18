@@ -1,6 +1,6 @@
 module bottombc
 use types,only:rprec
-use param,only:nx,ny,ld,cp,Le,Rv,Rd,rho_d,rho_w
+use param
 
 implicit none
 

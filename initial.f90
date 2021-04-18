@@ -6,7 +6,7 @@ use sgsmodule,only: Cs_opt2,Cs_opt2_avg,F_LM,F_MM,F_QN,F_NN, &
                    G_LM,G_MM,G_QN,G_NN,Pr_t
 
 use scalars_module,only: RHS_T,sgs_t3
-use bottombc,only: psi_m,psi_m0,psi_h,psi_h0
+use bottombc
 use scalars_module_q,only: RHS_q,sgs_q3
 use immersedbc,only:fx,fy,fz,u_des,v_des,w_des,n_bldg,bldg_pts
 
@@ -44,8 +44,13 @@ open(11,file=fname,form='unformatted')
 
 if(initu)then         ! if_initu_begins
   if(initsc) then     ! if_initsc_begins
-  
+    
+    
+    if (coord == 0) then
     print *,'Reading initial velocity and temperature from file'
+    end if
+    
+    
     select case (model)
       case (1)
         read (11) u(:, :, 1:nz), v(:, :, 1:nz), w(:, :, 1:nz),theta(:,:,1:nz), &
@@ -174,9 +179,13 @@ else
      print*, 'Creating initial velocity field with DNS BCs'
      call ic_dns()
   else
-    print*, 'Creating initial fields'
+   ! print*, 'Creating initial fields'
     if (S_FLAG) then
+    
+         if (coord == 0) then
          print *, 'Creating initial velocity & scalar fields'
+         end if
+         
          call ic_scal()
     else
        ! SKS
@@ -275,12 +284,19 @@ $endif
        if (lbc .eq. 0) then
            theta_mean=T_init !T_s_min is dimensional while T_s is non-dimensional
            q_mean=q_init
-           print *,'theta_mean = , q_mean= ',theta_mean, q_mean
+           
+         if (coord == 0) then
+         print *,'theta_mean = , q_mean= ',theta_mean, q_mean
+         end if
            
        else
            theta_mean=T_init
            q_mean=q_init
+           
+         if (coord == 0) then
          print *,'theta_mean = , q_mean= ',theta_mean, q_mean
+         end if
+         
        end if
 
        if (sum(wt_s(1:nx,1:ny))/float(nx*ny) .lt. 0._rprec) then

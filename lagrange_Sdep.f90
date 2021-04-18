@@ -286,7 +286,10 @@ do jz = 1,nz
 
   if (inilag) then
     if ((.not. F_LM_MM_init) .and. (jt == cs_count .or. jt == DYN_init)) then
-      print *,'F_MM and F_LM initialized' 
+
+      if ( (coord == 0) .or. (coord == nproc-1)) then
+      print *,'F_MM and F_LM initialized'
+      end if 
       F_MM (:,:,jz) = MM
       F_LM (:,:,jz) = 0.03_rprec*MM
       F_MM(ld-1:ld,:,jz)=1._rprec
