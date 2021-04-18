@@ -494,7 +494,7 @@ do jt=1,nsteps
 !-------------------------------------------------
 
 
-    if ((jt_total .GE. 100000) .AND. (jt_total .LE. 120000) .AND. modulo (jt, 20) == 0) then
+    if ((jt_total .GE. 96000) .AND. (jt_total .LE. 120000) .AND. modulo (jt, 20) == 0) then
 
             call write_slices()
 

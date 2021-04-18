@@ -52,11 +52,11 @@ do jz=1,nz-1
      !    arg4(1:nx,1:ny)=theta(1:nx,1:ny,1)-sum(theta(1:nx,1:ny,1))/float(nx*ny)
 
       !  else
-        arg1(1:nx,1:ny)=w(1:nx,1:ny,jz)-sum(w(1:nx,1:ny,jz))/float(nx*ny)
+        arg1(1:nx,1:ny)=w(1:nx,1:ny,jz)
 
-        arg2(1:nx,1:ny)=u(1:nx,1:ny,jz)-sum(u(1:nx,1:ny,jz))/float(nx*ny)
-        arg3(1:nx,1:ny)=qmix(1:nx,1:ny,jz)-sum(qmix(1:nx,1:ny,jz))/float(nx*ny)
-        arg4(1:nx,1:ny)=theta(1:nx,1:ny,jz)-sum(theta(1:nx,1:ny,jz))/float(nx*ny)
+        arg2(1:nx,1:ny)=u(1:nx,1:ny,jz)
+        arg3(1:nx,1:ny)=qmix(1:nx,1:ny,jz)
+        arg4(1:nx,1:ny)=theta(1:nx,1:ny,jz)
         
      !   end if
 
@@ -196,34 +196,34 @@ do jz=1,nz-1
               close(2826)
              
              
-            else if (coord==120) then
+            else if (coord==128) then
               w_slice4_xy(1:nx,1:ny)=arg1(1:nx,1:ny)
               u_slice4_xy(1:nx,1:ny)=arg2(1:nx,1:ny)
               q_slice4_xy(1:nx,1:ny)=arg3(1:nx,1:ny)
               theta_slice4_xy(1:nx,1:ny)=arg4(1:nx,1:ny)
 
-              open(unit=2827,file=path//'output/u_slice4_xy_coord120.out',status="unknown",position="append")
+              open(unit=2827,file=path//'output/u_slice4_xy_coord128.out',status="unknown",position="append")
                 do jy=1,ny
                   write(2827,7185) (u_slice4_xy(i,jy),i=1,nx)
                 end do
               close(2827)
 
 
-              open(unit=2828,file=path//'output/w_slice4_xy_coord120.out',status="unknown",position="append")
+              open(unit=2828,file=path//'output/w_slice4_xy_coord128.out',status="unknown",position="append")
                 do jy=1,ny
                   write(2828,7185) (w_slice4_xy(i,jy),i=1,nx)
                 end do
               close(2828)
 
 
-              open(unit=2829,file=path//'output/q_slice4_xy_coord120.out',status="unknown",position="append")
+              open(unit=2829,file=path//'output/q_slice4_xy_coord128.out',status="unknown",position="append")
                 do jy=1,ny
                   write(2829,7185) (q_slice4_xy(i,jy),i=1,nx)
                 end do
               close(2829)
 
 
-              open(unit=2830,file=path//'output/theta_slice4_xy_coord120.out',status="unknown",position="append")
+              open(unit=2830,file=path//'output/theta_slice4_xy_coord128.out',status="unknown",position="append")
                 do jy=1,ny
                   write(2830,7185) (theta_slice4_xy(i,jy),i=1,nx)
                 end do

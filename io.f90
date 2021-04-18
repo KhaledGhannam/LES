@@ -220,7 +220,7 @@ end if
 if (output) then
   if ((mod(jt_total,base)==0).and.(jt_total.ge.1)) then
     if (S_FLAG) then
-       write (fname, '(a,i6.6,a)') path // 'output/vel_sc', jt_total, '.out'
+   !    write (fname, '(a,i6.6,a)') path // 'output/vel_sc', jt_total, '.out'
     else
        write (fname, '(a,i6.6,a)') path // 'output/vel', jt_total, '.out'
     end if
@@ -1250,7 +1250,7 @@ $endif
         open(file_ind,file=trim(local_filename),status="unknown",position="append")
            do ind3=1,nz_tot-1
            do ind2=1,ny
-            write(file_ind,5168)jt*dt,(avg_var_tot_domain(ind1,ind2,ind3),ind1=1,nx)
+            write(file_ind,5168)(avg_var_tot_domain(ind1,ind2,ind3),ind1=1,nx)
            end do
            end do
         close(file_ind)
@@ -1294,9 +1294,9 @@ $endif
 
   if((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
         open(file_ind,file=trim(local_filename),status="unknown",position="append")
-           do ind3=1,192
+           do ind3=1,250
            do ind2=1,ny
-            write(file_ind,5168)jt*dt,(avg_var_tot_domain(ind1,ind2,ind3),ind1=1,nx)
+            write(file_ind,5168)(avg_var_tot_domain(ind1,ind2,ind3),ind1=1,nx)
            end do
            end do
         close(file_ind)
