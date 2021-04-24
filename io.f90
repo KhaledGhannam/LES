@@ -16,7 +16,7 @@ public :: average_dim_select_flag, dim1_size, dim2_size,        &
           compute_avg_var 
 
 integer,parameter::num_hour_out=1
-integer,parameter::base=50000,nwrite=base
+integer,parameter::base=180000,nwrite=base
 ! SKS
 ! Shouldnt be hard coded..base corresponds to the 
 ! time interval after which you want to write file
@@ -220,7 +220,7 @@ end if
 if (output) then
   if ((mod(jt_total,base)==0).and.(jt_total.ge.1)) then
     if (S_FLAG) then
-   !    write (fname, '(a,i6.6,a)') path // 'output/vel_sc', jt_total, '.out'
+      write (fname, '(a,i6.6,a)') path // 'output/vel_sc', jt_total, '.out'
     else
        write (fname, '(a,i6.6,a)') path // 'output/vel', jt_total, '.out'
     end if
@@ -969,7 +969,7 @@ end do
 !end do
 !---------------
 
-if (mod(jt,p_count)==0) then
+if (mod(jt_total,p_count)==0) then
         allocate(avg_out(1:nx,1:ny,1:(nz_tot-1)));
 
         call collocate_MPI_averages_SHH2(au,avg_out,120,'u')
@@ -990,7 +990,7 @@ if (mod(jt,p_count)==0) then
         call collocate_MPI_averages_SHH2(atyz,avg_out,188,'tyz')
         call collocate_MPI_averages_SHH2(asgst3,avg_out,258,'sgst3')
         call collocate_MPI_averages_SHH2(asgsq3,avg_out,261,'sgsq3')
-        
+        call collocate_MPI_averages_SHH2(azlcl_all,avg_out,285,'zlcl_all')
         deallocate(avg_out)
         
         !!VK Zero out the outputted averages !!
@@ -1003,12 +1003,12 @@ if (mod(jt,p_count)==0) then
          atxz=0._rprec; atyz=0._rprec;
         asgst3=0._rprec;asgsq3=0._rprec;
         arg1=0._rprec;arg2=0._rprec;arg3=0._rprec;
-        arg7=0._rprec;arg8=0._rprec;
+        arg7=0._rprec;arg8=0._rprec;azlcl_all=0._rprec;
 
 end if
 
           
-if (mod(jt,3*p_count)==0) then
+if (mod(jt_total,2*p_count)==0) then
         allocate(avg_out(1:nx,1:ny,1:(nz_tot-1))); 
         
         call collocate_MPI_averages_SHH2(ap,avg_out,123,'p')
@@ -1156,7 +1156,7 @@ if (mod(jt,3*p_count)==0) then
         call collocate_MPI_averages_SHH2(avapor_pr,avg_out,282,'vapor_pr')
         call collocate_MPI_averages_SHH2(asat_vapor_pr,avg_out,283,'sat_vapor_pr')
         call collocate_MPI_averages_SHH2(asat_qmix,avg_out,284,'sat_qmix')
-        call collocate_MPI_averages_SHH2(azlcl_all,avg_out,285,'zlcl_all')
+        
         !call collocate_MPI_averages_SHH2(avw1,avg_out,286,'vw1')
         !call collocate_MPI_averages_SHH2(avw2,avg_out,287,'vw2')
         !call collocate_MPI_averages_SHH2(avw3,avg_out,288,'vw3')
@@ -1210,7 +1210,7 @@ ap=0._rprec;
         !awq3=0._rprec;awq4=0._rprec;auw1=0._rprec;auw2=0._rprec;auw3=0._rprec;auw4=0._rprec;
         !avw1=0._rprec;avw2=0._rprec;avw3=0._rprec;avw4=0._rprec;
         aactual_T=0._rprec;aactual_Tv=0._rprec;apr_atm=0._rprec;arel_hum=0._rprec;arel_hum_q=0._rprec;
-        avapor_pr=0._rprec;asat_vapor_pr=0._rprec;asat_qmix=0._rprec;azlcl_all=0._rprec;
+        avapor_pr=0._rprec;asat_vapor_pr=0._rprec;asat_qmix=0._rprec;
 
 end if
 5168     format(1400(E15.6))
@@ -1294,7 +1294,7 @@ $endif
 
   if((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
         open(file_ind,file=trim(local_filename),status="unknown",position="append")
-           do ind3=1,250
+           do ind3=1,320
            do ind2=1,ny
             write(file_ind,5168)(avg_var_tot_domain(ind1,ind2,ind3),ind1=1,nx)
            end do

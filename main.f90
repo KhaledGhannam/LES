@@ -448,7 +448,7 @@ do jt=1,nsteps
     call level_set_cylinder_CD ()
   $endif
 
-  if (modulo (jt, 100) == 0) then
+  if (modulo (jt, 500) == 0) then
     call rmsdiv (rmsdivvel)
     call timestep_conditions(timestep_vars(1),timestep_vars(2),timestep_vars(3),timestep_vars(4))
 !   timestep_vars(1) is CFL and timestep_vars(2) is viscous stability limit
@@ -494,7 +494,7 @@ do jt=1,nsteps
 !-------------------------------------------------
 
 
-    if ((jt_total .GE. 96000) .AND. (jt_total .LE. 120000) .AND. modulo (jt, 20) == 0) then
+    if ((jt_total .GE. 120000) .AND. (jt_total .LE. 144000) .AND. modulo (jt, 40) == 0) then
 
             call write_slices()
 

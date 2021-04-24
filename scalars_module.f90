@@ -516,7 +516,7 @@ implicit none
 integer:: jx,jy,i
 real(kind=rprec), dimension(ld,ny):: wt_avg,wtv_avg,theta_avg,u1,v1
 real(kind=rprec), dimension(nx,ny):: x,x0,x0s,zeta,zeta0,zeta0s,u_avg
-real(kind=rprec):: g_, wt_, wtv_, ustar_, theta_, thetav_, L_, L2_, zo_,wstar_avg
+real(kind=rprec):: g_, wt_, wtv_, ustar_, theta_, thetav_, L_, L2_, zo_,ustar_avg_time
 real(kind=rprec)::ustar_time, q_time, theta_time, theta_v_time
 real(kind=rprec),save:: obuk_L,obuk_ustar,obuk_phi_m,obuk_phi_h,obuk_psi_m   
 real(kind=rprec),save:: obuk_wt_sfc,obuk_psi_h,obuk_zo,obuk_wstar   
@@ -652,33 +652,33 @@ end if
   end do
 
   
-  wstar_avg=sign((g_/theta_*abs(wt_))**(1.0/3.0),wt_)
+  ustar_avg_time = sum(ustar_avg(:,:))/float(nx*ny)
   ustar_time= ((sum(txz(1:nx,1:ny,1))/float(nx*ny))**2 + &
                     (sum(tyz(1:nx,1:ny,1))/float(nx*ny))**2)**(0.25)
   theta_time = theta_
   theta_v_time = thetav_
   q_time = sum(qmix(1:nx,1:ny,1))/float(nx*ny)
-  L_ = -(ustar_**3)/(vonk*(g_/theta_time)*wtv_)
+  L_ = -(ustar_**3)/(vonk*(g_/theta_)*wtv_)
   L2_ = sum(L(:,:))/float(nx*ny)
   
 ! SKS
-  if (mod(jt,100) == 0) then     ! 100 because wbase = 100
+  if (mod(jt,500) == 0) then     ! 100 because wbase = 100
 
  
-  write (6,7780) L_*z_i, L2_*z_i, ustar_*u_star, theta_*T_scale, &
-                    thetav_*T_scale, wstar_avg*u_star, (dz/2)/L_
+  write (6,7780) L_*z_i,L2_*z_i,ustar_*u_star,ustar_avg_time*u_star, &
+                    theta_*T_scale, thetav_*T_scale,(dz/2)/L_
 end if
 
-7780 format ('L(m),Lvv(m),ustar(m/s),theta_1(K),thetav_1(K), wstar(m/s), z/L:',&
+7780 format ('L_avg(m),L_local(m),us_avg(m/s),us_loc(m/s),theta_1(K),thetav_1(K),z/Lavg:',&
 (7(1x,F15.7)))
 
 !-------------------- OUTPUT ------------------------------
 ! Output the heat flux time series to a file to be used later
 
-if (mod(jt,c_count)==0) then 
+if (mod(jt_total,c_count)==0) then 
  open (unit=9334,file=path//'output/tseries.out',status="unknown",position="append")
-    write(9334,5168) (jt_total+1)*dt, L_*z_i, L2_*z_i, ustar_time*u_star, &
-                          theta_time*T_scale, theta_v_time*T_scale, q_time*q_scale
+    write(9334,5168) jt_total, L_*z_i,L2_*z_i,ustar_*u_star,ustar_avg_time*u_star, &
+                    theta_*T_scale, thetav_*T_scale, q_time*q_scale
     close(9334)
     
     end if
