@@ -99,14 +99,14 @@ SRCS =  \
         padd.f90 param.f90 press_stag_array.f90 \
         ran3.f90 rmsdiv.f90 \
         scaledep_dynamic.f90 scalars_module.f90 scalars_module_q.f90 \
-	scalars_module2.f90 \
+	scalars_module2.f90 scalars_module_co.f90 \
         scalar_scaledep_dynamic.f90 \
         sgs_stag.f90 sgsmodule.f90 sim_param.f90 \
         spectra.f90 \
         std_dynamic.f90 \
         test_filtermodule.f90 tecplot.f90 topbc.f90 \
         tridag.f90 tridag_array.f90 types.f90 \
-        unpadd.f90 \
+        unpadd.f90 canopy_drag.f90 \
         wallstress.f90 wallstress_dns.f90 \
         write_spectra.f90 \
 

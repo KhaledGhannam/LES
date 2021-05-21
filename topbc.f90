@@ -28,7 +28,7 @@ $if ($MPI)
 $endif
 
 if (damping_method==2) then
-         z_d = 0.75_rprec*(L_z*real(nproc))
+         z_d = 0.85_rprec*(L_z*real(nproc))
          cfrdmp = 3.9_rprec
          sponge=0._rprec
          do k=1,nz-1

@@ -26,11 +26,12 @@ real(rprec),dimension(ld,ny,nz)::dpdx=0._rprec, &
                                  dpdy=0._rprec, &
                                  dpdz=0._rprec
 
+real(rprec),dimension(ld,ny,$lbz:nz)::fu_c,fv_c,fw_c,C_d,wind_xy,wind_z
 real(rprec),dimension(ld,ny,$lbz:nz)::txx,txy,tyy
 real(rprec),dimension(ld,ny,$lbz:nz)::txz,tyz,tzz
 real(kind=rprec),dimension(ld,ny,0:nz)::p
 real(rprec),dimension(ld,ny,$lbz:nz)::divtx,divty,divtz
-real(kind=rprec),dimension(ld,ny,$lbz:nz)::theta,qmix
+real(kind=rprec),dimension(ld,ny,$lbz:nz)::theta,qmix,cmix
 !MM
 real ::u_old
 !MM

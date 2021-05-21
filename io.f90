@@ -16,7 +16,7 @@ public :: average_dim_select_flag, dim1_size, dim2_size,        &
           compute_avg_var 
 
 integer,parameter::num_hour_out=1
-integer,parameter::base=50000,nwrite=base
+integer,parameter::base=180000,nwrite=base
 ! SKS
 ! Shouldnt be hard coded..base corresponds to the 
 ! time interval after which you want to write file
@@ -24,7 +24,7 @@ integer,parameter::base=50000,nwrite=base
 ! SKS
 
 logical,parameter:: io_spec=.false.,output_fields_3d_flag=.false.
-integer,parameter::spec_write_freqz=600, fields_3d_write_freqz=p_count*6
+integer,parameter::spec_write_freqz=600, fields_3d_write_freqz=6
 integer,parameter::spec_write_start=1,spec_write_end=24*base
 !! --------------------------------------------------------------------
 !! The following block defines parameters for instantaneous slice output
@@ -48,8 +48,7 @@ character (*), parameter :: fcumulative_time = path // 'total_time.dat'
 integer, parameter :: n_avg_stats = 5000000 !--interval for updates in avg_stats
 character (*), parameter :: end_hdr_avg = '# end header'
 
-!! --------------------------------------------------------------------
-!! The following block defines parameters for use in avgslice and scalar_slice
+
 !! --------------------------------------------------------------------
 integer,parameter :: average_dim_select_flag=1-(average_dim_num/2) 
 ! The variable average_dim_select_flag generates the following values based
@@ -185,7 +184,6 @@ use sim_param,only:path,u,v,w,dudz,dudx,p,&
      RHSx,RHSy,RHSz,theta, txx, txy, txz, tyy, tyz, tzz
 use sgsmodule,only:Cs_opt2
 use scalars_module,only:sgs_t3
-use scalars_module2,only:scalar_slice,budget_TKE_scalar
 implicit none
 real(kind=rprec),dimension(nz)::u_ndim
 character(len=20)::req
@@ -222,7 +220,7 @@ end if
 if (output) then
   if ((mod(jt_total,base)==0).and.(jt_total.ge.1)) then
     if (S_FLAG) then
-       write (fname, '(a,i6.6,a)') path // 'output/vel_sc', jt_total, '.out'
+      write (fname, '(a,i6.6,a)') path // 'output/vel_sc', jt_total, '.out'
     else
        write (fname, '(a,i6.6,a)') path // 'output/vel', jt_total, '.out'
     end if
@@ -316,8 +314,7 @@ end select
 end subroutine compute_avg_var
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!--The following subroutine does the collocation of the MPI arrays for
-! averaging in avgslice and scalar_slice (in scalars_module2.f90)
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine collocate_MPI_averages(avg_var_proc,avg_var_tot_domain,file_ind)
 use param
@@ -356,9 +353,6 @@ end subroutine collocate_MPI_averages
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!--The following subroutine does the collocation of the MPI arrays for
-! averaging in avgslice and scalar_slice (in scalars_module2.f90)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine collocate_MPI_averages_N(avg_var_proc,avg_var_tot_domain,file_ind,filename_str)
 !subroutine collocate_MPI_averages(avg_var_proc,avg_var_tot_domain,file_ind)
@@ -412,6 +406,7 @@ use param,only:dz,p_count,c_count,jt,jt_total,T_scale,q_scale,u_star,z_i
 use sgsmodule,only:Cs_opt2,Cs_Ssim,Beta_avg,Betaclip_avg
 use scalars_module,only: L,wstar,dTdz,sgs_t1,sgs_t2,sgs_t3,dTdx,dTdy
 use scalars_module_q,only: dqdz,sgs_q2,sgs_q1,sgs_q3,dqdx,dqdy
+use scalars_module_co,only: dcodz,sgs_co2,sgs_co1,sgs_co3,dcodx,dcody
 use atm_thermodynamics
 implicit none
 integer::i,j,k
@@ -423,10 +418,10 @@ real(kind=rprec),dimension(nx,ny,nz-1),save::avapor_pr,asat_vapor_pr,asat_qmix,a
 ! -----------------------------
 ! First, second, and third individual moments
 real(kind=rprec),dimension(nx,ny,nz-1),save::ap,au,av,aw,atheta,aq,p2,u2,v2,w2,theta2,q2,u3,v3,w3,q3,T3
-!real(kind=rprec),dimension(nx,ny,nz-1),save::apf,pf2
+real(kind=rprec),dimension(nx,ny,nz-1),save::ac,ac2,awc,awwc,awcc
 ! Derivatives
 real(kind=rprec),dimension(nx,ny,nz-1),save::adudx,adudy,adudz,advdx,advdy,advdz,adwdx,adwdy,adwdz,adTdx,adTdy,adTdz
-real(kind=rprec),dimension(nx,ny,nz-1),save::adqdx,adqdy,adqdz,adpdx,adpdy,adpdz
+real(kind=rprec),dimension(nx,ny,nz-1),save::adqdx,adqdy,adqdz,adpdx,adpdy,adpdz,adcodz
 ! 3rd moments and fluxes
 real(kind=rprec),dimension(nx,ny,nz-1),save::tke,awe,aue,ave,auw,avw,awt,awq,aut,avt,auq,avq,auv
 real(kind=rprec),dimension(nx,ny,nz-1),save::awuu,awvv,awqq,awtt,awwu,awwv,awwt,awwq
@@ -442,14 +437,17 @@ real(kind=rprec),dimension(nx,ny,nz-1),save::at11s11,at12s12,at13s13,at22s22,at2
 !real(kind=rprec),dimension(nx,ny,nz-1),save::api1_tx,api2_ty,api3_tz,api1_qx,api2_qy,api3_qz
 real(kind=rprec),dimension(nx,ny,nz-1),save::as11,as12,as13,as22,as23,as33
 !real(kind=rprec),dimension(nx,ny,nz-1),save::asgst1,asgst2,asgst3,asgsq1,asgsq2,asgsq3
-real(kind=rprec),dimension(nx,ny,nz-1),save::asgst3,asgsq3
+real(kind=rprec),dimension(nx,ny,nz-1),save::asgst3,asgsq3,asgsc3
 real(kind=rprec),dimension(nx,ny,nz-1),save::aut11,aut12,aut13,avt21,avt22,avt23,awt31,awt32,awt33
-!real(kind=rprec),dimension(nx,ny,nz-1),save::awt1,awt2,awt3,awt4,awq1,awq2,awq3,awq4,auw1,auw2,auw3,auw4
+real(kind=rprec),dimension(nx,ny,nz-1),save::awt1,awt2,awt3,awt4,awq1,awq2,awq3,awq4,auw1,auw2,auw3,auw4
 !real(kind=rprec),dimension(nx,ny,nz-1),save::avw1,avw2,avw3,avw4
+real(kind=rprec),dimension(nx,ny,nz-1),save::afu_c,afv_c,afw_c,aC_d
 real(kind=rprec),allocatable,dimension(:,:,:)::avg_out
 real(kind=rprec)::fr
-real(kind=rprec),dimension(nx,ny)::arg1,arg2,arg3,arg4,arg4f,arg5,arg6,arg7,arg8,arg9,arg10,arg11,arg12,arg13
+real(kind=rprec),dimension(nx,ny)::arg1,arg2,arg3,arg4,arg4f,arg5,arg6,arg7,arg8,arg8c
+real(kind=rprec),dimension(nx,ny)::arg9,arg10,arg11,arg12,arg13
 real(kind=rprec),dimension(nx,ny)::ux,uy,uz,vx,vy,vz,wx,wy,wz,px,py,pz,tx,ty,tz,qx,qy,qz
+real(kind=rprec),dimension(nx,ny)::cz
 real(kind=rprec),dimension(nx,ny)::S11,S22,S33,S12,S13,S23
 real(rprec),parameter::delbar=2._rprec
 real(rprec)::denomsig=0.5_rprec/((delbar**(2.0_rprec/3.0_rprec))-1._rprec)
@@ -498,11 +496,14 @@ if(jt_total .LE. c_count) then
         arg1=0._rprec;arg2=0._rprec;arg3=0._rprec;arg4=0._rprec;arg4f=0._rprec;arg5=0._rprec;arg6=0._rprec;
         arg7=0._rprec;arg8=0._rprec;arg9=0._rprec;arg10=0._rprec;arg11=0._rprec;
         arg12=0._rprec;ux=0._rprec;uy=0._rprec;uz=0._rprec;vx=0._rprec;vy=0._rprec;
-        !awt1=0._rprec;awt2=0._rprec;awt3=0._rprec;awt4=0._rprec;awq1=0._rprec;awq2=0._rprec;
-        !awq3=0._rprec;awq4=0._rprec;auw1=0._rprec;auw2=0._rprec;auw3=0._rprec;auw4=0._rprec;
+        awt1=0._rprec;awt2=0._rprec;awt3=0._rprec;awt4=0._rprec;awq1=0._rprec;awq2=0._rprec;
+        awq3=0._rprec;awq4=0._rprec;auw1=0._rprec;auw2=0._rprec;auw3=0._rprec;auw4=0._rprec;
         !avw1=0._rprec;avw2=0._rprec;avw3=0._rprec;avw4=0._rprec;
         aactual_T=0._rprec;aactual_Tv=0._rprec;apr_atm=0._rprec;arel_hum=0._rprec;arel_hum_q=0._rprec;
         avapor_pr=0._rprec;asat_vapor_pr=0._rprec;asat_qmix=0._rprec;azlcl_all=0._rprec;
+        afu_c=0._rprec; afv_c=0._rprec; afw_c=0._rprec; aC_d=0._rprec;
+        ac=0._rprec; ac2=0._rprec; awc=0._rprec; awwc=0._rprec; 
+        awcc=0._rprec; asgsc3=0._rprec; adcodz=0._rprec;
 end if
 
 
@@ -529,9 +530,10 @@ do k=1,Nz-1
          arg6(1:nx,1:ny)=(tyz(1:nx,1:ny,k)+tyz(1:nx,1:ny,k+1))/2.0_rprec
          arg7(1:nx,1:ny)=theta(1:nx,1:ny,k)
          arg8(1:nx,1:ny)=qmix(1:nx,1:ny,k)
+         arg8c(1:nx,1:ny)=cmix(1:nx,1:ny,k)
 
          arg9(1:nx,1:ny)=(u(1:nx,1:ny,k)-sum(u(1:nx,1:ny,k))/(nx*ny))
-         arg13(1:nx,1:ny)=(v(1:nx,1:ny,k)-sum(v(1:nx,1:ny,k))/(nx*ny))
+         arg13(1:nx,1:ny)=(cmix(1:nx,1:ny,k)-sum(cmix(1:nx,1:ny,k))/(nx*ny))
          arg10(1:nx,1:ny)=0.25_rprec*(w(1:nx,1:ny,k+1)-sum(w(1:nx,1:ny,k+1))/(nx*ny))
          arg11(1:nx,1:ny)=(theta(1:nx,1:ny,k)-sum(theta(1:nx,1:ny,k))/(nx*ny))
          arg12(1:nx,1:ny)=(qmix(1:nx,1:ny,k)-sum(qmix(1:nx,1:ny,k))/(nx*ny))
@@ -564,6 +566,7 @@ do k=1,Nz-1
          qx(1:nx,1:ny)=dqdx(1:nx,1:ny,k)
          qy(1:nx,1:ny)=dqdy(1:nx,1:ny,k)
          qz(1:nx,1:ny)=dqdz(1:nx,1:ny,k)
+         cz(1:nx,1:ny)=dcodz(1:nx,1:ny,k)
 
          else
 
@@ -581,12 +584,13 @@ do k=1,Nz-1
          arg6(1:nx,1:ny)=tyz(1:nx,1:ny,k)
          arg7(1:nx,1:ny)=(theta(1:nx,1:ny,k)+theta(1:nx,1:ny,k-1))/2.0_rprec
          arg8(1:nx,1:ny)=(qmix(1:nx,1:ny,k)+qmix(1:nx,1:ny,k-1))/2.0_rprec
+         arg8c(1:nx,1:ny)=(cmix(1:nx,1:ny,k)+cmix(1:nx,1:ny,k-1))/2.0_rprec
 
          arg9(1:nx,1:ny)=0.5_rprec*(u(1:nx,1:ny,k)-sum(u(1:nx,1:ny,k))/(nx*ny)+&
                             u(1:nx,1:ny,k-1)-sum(u(1:nx,1:ny,k-1))/(nx*ny))
                             
-         arg13(1:nx,1:ny)=0.5_rprec*(v(1:nx,1:ny,k)-sum(v(1:nx,1:ny,k))/(nx*ny)+&
-                            v(1:nx,1:ny,k-1)-sum(v(1:nx,1:ny,k-1))/(nx*ny))
+         arg13(1:nx,1:ny)=0.5_rprec*(cmix(1:nx,1:ny,k)-sum(cmix(1:nx,1:ny,k))/(nx*ny)+&
+                            cmix(1:nx,1:ny,k-1)-sum(cmix(1:nx,1:ny,k-1))/(nx*ny))
                             
          arg10(1:nx,1:ny)=(w(1:nx,1:ny,k)-sum(w(1:nx,1:ny,k))/(nx*ny))
          
@@ -627,10 +631,9 @@ do k=1,Nz-1
          qx(1:nx,1:ny)=((dqdx(1:nx,1:ny,k)+dqdx(1:nx,1:ny,k-1))/2._rprec)
          qy(1:nx,1:ny)=((dqdy(1:nx,1:ny,k)+dqdy(1:nx,1:ny,k-1))/2._rprec)
          qz(1:nx,1:ny)=dqdz(1:nx,1:ny,k)
+         cz(1:nx,1:ny)=dcodz(1:nx,1:ny,k)
 
        end if
-
-
 
 
 ! -----   Thermodynamics -----------
@@ -646,7 +649,14 @@ asat_vapor_pr(1:nx,1:ny,k)=asat_vapor_pr(1:nx,1:ny,k)+fr*sat_vapor_pr(1:nx,1:ny,
 asat_qmix(1:nx,1:ny,k)=asat_qmix(1:nx,1:ny,k)+fr*sat_qmix(1:nx,1:ny,k)
 azlcl_all(1:nx,1:ny,k)=azlcl_all(1:nx,1:ny,k)+fr*zlcl_all(1:nx,1:ny,k)
 
-! First moments
+
+! ---- canopy drag terms -----
+afu_c(1:nx,1:ny,k)=afu_c(1:nx,1:ny,k)+fr*fu_c(1:nx,1:ny,k) 
+afv_c(1:nx,1:ny,k)=afv_c(1:nx,1:ny,k)+fr*fv_c(1:nx,1:ny,k) 
+afw_c(1:nx,1:ny,k)=afw_c(1:nx,1:ny,k)+fr*fw_c(1:nx,1:ny,k)
+aC_d(1:nx,1:ny,k)=aC_d(1:nx,1:ny,k)+fr*C_d(1:nx,1:ny,k)  
+
+!----- First moments ---------
 
        au(1:nx,1:ny,k)=au(1:nx,1:ny,k)+fr*arg1(1:nx,1:ny)
        av(1:nx,1:ny,k)=av(1:nx,1:ny,k)+fr*arg2(1:nx,1:ny)
@@ -655,6 +665,7 @@ azlcl_all(1:nx,1:ny,k)=azlcl_all(1:nx,1:ny,k)+fr*zlcl_all(1:nx,1:ny,k)
   !     apf(1:nx,1:ny,k)=apf(1:nx,1:ny,k)+fr*arg4f
        atheta(1:nx,1:ny,k)=atheta(1:nx,1:ny,k)+fr*arg7(1:nx,1:ny)
        aq(1:nx,1:ny,k)=aq(1:nx,1:ny,k)+fr*arg8(1:nx,1:ny)
+       ac(1:nx,1:ny,k)=ac(1:nx,1:ny,k)+fr*arg8c(1:nx,1:ny)
 
 ! Variances and skewnesses
 
@@ -665,6 +676,8 @@ azlcl_all(1:nx,1:ny,k)=azlcl_all(1:nx,1:ny,k)+fr*zlcl_all(1:nx,1:ny,k)
    !    pf2(1:nx,1:ny,k)=pf2(1:nx,1:ny,k)+fr*arg4f*arg4f
        theta2(1:nx,1:ny,k)=theta2(1:nx,1:ny,k)+fr*arg7(1:nx,1:ny)*arg7(1:nx,1:ny)
        q2(1:nx,1:ny,k)=q2(1:nx,1:ny,k)+fr*arg8(1:nx,1:ny)*arg8(1:nx,1:ny)
+       ac2(1:nx,1:ny,k)=ac2(1:nx,1:ny,k)+fr*arg8c(1:nx,1:ny)*arg8c(1:nx,1:ny)
+       
        tke(1:nx,1:ny,k)=tke(1:nx,1:ny,k)+fr*(0.5_rprec*(arg1(1:nx,1:ny)*arg1(1:nx,1:ny)+&
                           arg2(1:nx,1:ny)*arg2(1:nx,1:ny)+arg3(1:nx,1:ny)*arg3(1:nx,1:ny)))
 
@@ -686,6 +699,7 @@ azlcl_all(1:nx,1:ny,k)=azlcl_all(1:nx,1:ny,k)+fr*zlcl_all(1:nx,1:ny,k)
       avw(1:nx,1:ny,k)=avw(1:nx,1:ny,k)+fr*arg2(:,:)*arg3(:,:)
       awt(1:nx,1:ny,k)=awt(1:nx,1:ny,k)+fr*arg3(:,:)*arg7(:,:)
       awq(1:nx,1:ny,k)=awq(1:nx,1:ny,k)+fr*arg3(:,:)*arg8(:,:)
+      awc(1:nx,1:ny,k)=awc(1:nx,1:ny,k)+fr*arg3(:,:)*arg8c(:,:)
       auv(1:nx,1:ny,k)=auv(1:nx,1:ny,k)+fr*arg1(:,:)*arg2(:,:)
       aut(1:nx,1:ny,k)=aut(1:nx,1:ny,k)+fr*arg1(:,:)*arg7(:,:)
       avt(1:nx,1:ny,k)=avt(1:nx,1:ny,k)+fr*arg2(:,:)*arg7(:,:)
@@ -696,10 +710,12 @@ azlcl_all(1:nx,1:ny,k)=azlcl_all(1:nx,1:ny,k)+fr*zlcl_all(1:nx,1:ny,k)
       awvv(1:nx,1:ny,k)=awvv(1:nx,1:ny,k)+fr*arg3(:,:)*arg2(:,:)*arg2(:,:)
       awtt(1:nx,1:ny,k)=awtt(1:nx,1:ny,k)+fr*arg3(:,:)*arg7(:,:)*arg7(:,:)
       awqq(1:nx,1:ny,k)=awqq(1:nx,1:ny,k)+fr*arg3(:,:)*arg8(:,:)*arg8(:,:)
+      awcc(1:nx,1:ny,k)=awcc(1:nx,1:ny,k)+fr*arg3(:,:)*arg8c(:,:)*arg8c(:,:)
       awwu(1:nx,1:ny,k)=awwu(1:nx,1:ny,k)+fr*arg3(:,:)*arg3(:,:)*arg1(:,:)
       awwv(1:nx,1:ny,k)=awwv(1:nx,1:ny,k)+fr*arg3(:,:)*arg3(:,:)*arg2(:,:)
       awwt(1:nx,1:ny,k)=awwt(1:nx,1:ny,k)+fr*arg3(:,:)*arg3(:,:)*arg7(:,:)
       awwq(1:nx,1:ny,k)=awwq(1:nx,1:ny,k)+fr*arg3(:,:)*arg3(:,:)*arg8(:,:)
+      awwc(1:nx,1:ny,k)=awwc(1:nx,1:ny,k)+fr*arg3(:,:)*arg3(:,:)*arg8c(:,:)
 
       !pi1_t(1:nx,1:ny,k)=pi1_t(1:nx,1:ny,k)+fr*(sgs_t1(1:nx,1:ny,k))*arg7
       !pi2_t(1:nx,1:ny,k)=pi2_t(1:nx,1:ny,k)+fr*(sgs_t2(1:nx,1:ny,k))*arg7
@@ -717,6 +733,7 @@ azlcl_all(1:nx,1:ny,k)=azlcl_all(1:nx,1:ny,k)+fr*zlcl_all(1:nx,1:ny,k)
       !asgsq1(1:nx,1:ny,k)=asgsq1(1:nx,1:ny,k)+fr*(sgs_q1(1:nx,1:ny,k))
       !asgsq2(1:nx,1:ny,k)=asgsq2(1:nx,1:ny,k)+fr*(sgs_q2(1:nx,1:ny,k))
       asgsq3(1:nx,1:ny,k)=asgsq3(1:nx,1:ny,k)+fr*(sgs_q3(1:nx,1:ny,k))
+      asgsc3(1:nx,1:ny,k)=asgsc3(1:nx,1:ny,k)+fr*(sgs_co3(1:nx,1:ny,k))
 
 
 ! -----------------Derivatives -----------
@@ -740,6 +757,8 @@ azlcl_all(1:nx,1:ny,k)=azlcl_all(1:nx,1:ny,k)+fr*zlcl_all(1:nx,1:ny,k)
      adqdx(1:nx,1:ny,k)=adqdx(1:nx,1:ny,k)+fr*qx(:,:)
      adqdy(1:nx,1:ny,k)=adqdy(1:nx,1:ny,k)+fr*qy(:,:)
      adqdz(1:nx,1:ny,k)=adqdz(1:nx,1:ny,k)+fr*qz(:,:)
+     
+     adcodz(1:nx,1:ny,k)=adcodz(1:nx,1:ny,k)+fr*cz(:,:)
 
      adpdx(1:nx,1:ny,k)=adpdx(1:nx,1:ny,k)+fr*px(:,:)
      adpdy(1:nx,1:ny,k)=adpdy(1:nx,1:ny,k)+fr*py(:,:)
@@ -859,306 +878,284 @@ azlcl_all(1:nx,1:ny,k)=azlcl_all(1:nx,1:ny,k)+fr*zlcl_all(1:nx,1:ny,k)
         !api2_qy(1:nx,1:ny,k)=api2_qy(1:nx,1:ny,k)+fr*(sgs_q2(1:nx,1:ny,k))*qy
         !api3_qz(1:nx,1:ny,k)=api3_qz(1:nx,1:ny,k)+fr*(sgs_q3(1:nx,1:ny,k))*qz
 
+if(jt_total .GE. 2*p_count) then
+do i=1,Nx,10
+do j=1,Ny,10
+
+        if ((arg10(i,j) > 0.0_rprec) .AND. (arg9(i,j) > 0.0_rprec)) then
+                auw1(i,j,k)=auw1(i,j,k)+fr*arg9(i,j)*arg10(i,j)
+                auw2(i,j,k)=auw2(i,j,k)+fr*0.0_rprec
+                auw3(i,j,k)=auw3(i,j,k)+fr*0.0_rprec
+                auw4(i,j,k)=auw4(i,j,k)+fr*0.0_rprec
+        else if ((arg10(i,j) > 0.0_rprec) .AND. (arg9(i,j) < 0.0_rprec)) then
+
+                auw1(i,j,k)=auw1(i,j,k)+fr*0.0_rprec
+                auw2(i,j,k)=auw2(i,j,k)+fr*arg9(i,j)*arg10(i,j)
+                auw3(i,j,k)=auw3(i,j,k)+fr*0.0_rprec
+                auw4(i,j,k)=auw4(i,j,k)+fr*0.0_rprec
+
+         else if ((arg10(i,j) < 0.0_rprec) .AND. (arg9(i,j) < 0.0_rprec)) then
+
+                auw1(i,j,k)=auw1(i,j,k)+fr*0.0_rprec
+                auw2(i,j,k)=auw2(i,j,k)+fr*0.0_rprec
+                auw3(i,j,k)=auw3(i,j,k)+fr*arg9(i,j)*arg10(i,j)
+                auw4(i,j,k)=auw4(i,j,k)+fr*0.0_rprec
+
+        else
+                auw1(i,j,k)=auw1(i,j,k)+fr*0.0_rprec
+                auw2(i,j,k)=auw2(i,j,k)+fr*0.0_rprec
+                auw3(i,j,k)=auw3(i,j,k)+fr*0.0_rprec
+                auw4(i,j,k)=auw4(i,j,k)+fr*arg9(i,j)*arg10(i,j)
+        end if
 
 
-      !  if ((arg10 > 0.0_rprec) .AND. (arg9 > 0.0_rprec)) then
-      !          auw1(1:nx,1:ny,k)=auw1(1:nx,1:ny,k)+fr*arg9*arg10
-      !          auw2(1:nx,1:ny,k)=auw2(1:nx,1:ny,k)+fr*0.0_rprec
-      !          auw3(1:nx,1:ny,k)=auw3(1:nx,1:ny,k)+fr*0.0_rprec
-      !          auw4(1:nx,1:ny,k)=auw4(1:nx,1:ny,k)+fr*0.0_rprec
-      !  else if ((arg10 > 0.0_rprec) .AND. (arg9 < 0.0_rprec)) then
+      
+        if ((arg10(i,j) > 0.0_rprec) .AND. (arg13(i,j) > 0.0_rprec)) then
+                awt1(i,j,k)=awt1(i,j,k)+fr*arg13(i,j)*arg10(i,j)
+                awt2(i,j,k)=awt2(i,j,k)+fr*0.0_rprec
+                awt3(i,j,k)=awt3(i,j,k)+fr*0.0_rprec
+                awt4(i,j,k)=awt4(i,j,k)+fr*0.0_rprec
 
-      !          auw1(1:nx,1:ny,k)=auw1(1:nx,1:ny,k)+fr*0.0_rprec
-      !          auw2(1:nx,1:ny,k)=auw2(1:nx,1:ny,k)+fr*arg9*arg10
-      !          auw3(1:nx,1:ny,k)=auw3(1:nx,1:ny,k)+fr*0.0_rprec
-      !          auw4(1:nx,1:ny,k)=auw4(1:nx,1:ny,k)+fr*0.0_rprec
+        else if ((arg10(i,j) > 0.0_rprec) .AND. (arg13(i,j) < 0.0_rprec)) then
 
-      !   else if ((arg10 < 0.0_rprec) .AND. (arg9 < 0.0_rprec)) then
+                awt1(i,j,k)=awt1(i,j,k)+fr*0.0_rprec
+                awt2(i,j,k)=awt2(i,j,k)+fr*arg13(i,j)*arg10(i,j)
+                awt3(i,j,k)=awt3(i,j,k)+fr*0.0_rprec
+                awt4(i,j,k)=awt4(i,j,k)+fr*0.0_rprec
 
-      !          auw1(1:nx,1:ny,k)=auw1(1:nx,1:ny,k)+fr*0.0_rprec
-      !          auw2(1:nx,1:ny,k)=auw2(1:nx,1:ny,k)+fr*0.0_rprec
-      !          auw3(1:nx,1:ny,k)=auw3(1:nx,1:ny,k)+fr*arg9*arg10
-      !          auw4(1:nx,1:ny,k)=auw4(1:nx,1:ny,k)+fr*0.0_rprec
+         else if ((arg10(i,j) < 0.0_rprec) .AND. (arg13(i,j) < 0.0_rprec)) then
 
-      !  else
-      !          auw1(1:nx,1:ny,k)=auw1(1:nx,1:ny,k)+fr*0.0_rprec
-      !          auw2(1:nx,1:ny,k)=auw2(1:nx,1:ny,k)+fr*0.0_rprec
-      !          auw3(1:nx,1:ny,k)=auw3(1:nx,1:ny,k)+fr*0.0_rprec
-      !          auw4(1:nx,1:ny,k)=auw4(1:nx,1:ny,k)+fr*arg9*arg10
-      !  end if
+                awt1(i,j,k)=awt1(i,j,k)+fr*0.0_rprec
+                awt2(i,j,k)=awt2(i,j,k)+fr*0.0_rprec
+                awt3(i,j,k)=awt3(i,j,k)+fr*arg13(i,j)*arg10(i,j)
+                awt4(i,j,k)=awt4(i,j,k)+fr*0.0_rprec
 
-
-      ! if ((arg10 > 0.0_rprec) .AND. (arg13 > 0.0_rprec)) then
-      !          avw1(1:nx,1:ny,k)=avw1(1:nx,1:ny,k)+fr*arg13*arg10
-      !          avw2(1:nx,1:ny,k)=avw2(1:nx,1:ny,k)+fr*0.0_rprec
-      !          avw3(1:nx,1:ny,k)=avw3(1:nx,1:ny,k)+fr*0.0_rprec
-      !          avw4(1:nx,1:ny,k)=avw4(1:nx,1:ny,k)+fr*0.0_rprec
-                
-      !  else if ((arg10 > 0.0_rprec) .AND. (arg13 < 0.0_rprec)) then
-
-      !          avw1(1:nx,1:ny,k)=avw1(1:nx,1:ny,k)+fr*0.0_rprec
-      !          avw2(1:nx,1:ny,k)=avw2(1:nx,1:ny,k)+fr*arg13*arg10
-      !          avw3(1:nx,1:ny,k)=avw3(1:nx,1:ny,k)+fr*0.0_rprec
-      !          avw4(1:nx,1:ny,k)=avw4(1:nx,1:ny,k)+fr*0.0_rprec
-
-      !   else if ((arg10 < 0.0_rprec) .AND. (arg13 < 0.0_rprec)) then
-
-      !          avw1(1:nx,1:ny,k)=avw1(1:nx,1:ny,k)+fr*0.0_rprec
-      !          avw2(1:nx,1:ny,k)=avw2(1:nx,1:ny,k)+fr*0.0_rprec
-      !          avw3(1:nx,1:ny,k)=avw3(1:nx,1:ny,k)+fr*arg13*arg10
-      !          avw4(1:nx,1:ny,k)=avw4(1:nx,1:ny,k)+fr*0.0_rprec
-
-      !  else
-      !          avw1(1:nx,1:ny,k)=avw1(1:nx,1:ny,k)+fr*0.0_rprec
-       !         avw2(1:nx,1:ny,k)=avw2(1:nx,1:ny,k)+fr*0.0_rprec
-       !         avw3(1:nx,1:ny,k)=avw3(1:nx,1:ny,k)+fr*0.0_rprec
-       !         avw4(1:nx,1:ny,k)=avw4(1:nx,1:ny,k)+fr*arg13*arg10
-       ! end if
-
-
-
-        !if ((arg10 > 0.0_rprec) .AND. (arg11 > 0.0_rprec)) then
-        !        awt1(1:nx,1:ny,k)=awt1(1:nx,1:ny,k)+fr*arg11*arg10
-        !        awt2(1:nx,1:ny,k)=awt2(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awt3(1:nx,1:ny,k)=awt3(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awt4(1:nx,1:ny,k)=awt4(1:nx,1:ny,k)+fr*0.0_rprec
-
-        !else if ((arg10 > 0.0_rprec) .AND. (arg11 < 0.0_rprec)) then
-
-        !        awt1(1:nx,1:ny,k)=awt1(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awt2(1:nx,1:ny,k)=awt2(1:nx,1:ny,k)+fr*arg11*arg10
-        !        awt3(1:nx,1:ny,k)=awt3(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awt4(1:nx,1:ny,k)=awt4(1:nx,1:ny,k)+fr*0.0_rprec
-
-        ! else if ((arg10 < 0.0_rprec) .AND. (arg11 < 0.0_rprec)) then
-
-        !        awt1(1:nx,1:ny,k)=awt1(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awt2(1:nx,1:ny,k)=awt2(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awt3(1:nx,1:ny,k)=awt3(1:nx,1:ny,k)+fr*arg11*arg10
-        !        awt4(1:nx,1:ny,k)=awt4(1:nx,1:ny,k)+fr*0.0_rprec
-
-        !else
-        !        awt1(1:nx,1:ny,k)=awt1(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awt2(1:nx,1:ny,k)=awt2(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awt3(1:nx,1:ny,k)=awt3(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awt4(1:nx,1:ny,k)=awt4(1:nx,1:ny,k)+fr*arg11*arg10
-        !end if
+        else
+                awt1(i,j,k)=awt1(i,j,k)+fr*0.0_rprec
+                awt2(i,j,k)=awt2(i,j,k)+fr*0.0_rprec
+                awt3(i,j,k)=awt3(i,j,k)+fr*0.0_rprec
+                awt4(i,j,k)=awt4(i,j,k)+fr*arg13(i,j)*arg10(i,j)
+        end if
 
 
 
-        !if ((arg10 > 0.0_rprec) .AND. (arg12 > 0.0_rprec)) then
-        !        awq1(1:nx,1:ny,k)=awq1(1:nx,1:ny,k)+fr*arg12*arg10
-        !        awq2(1:nx,1:ny,k)=awq2(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awq3(1:nx,1:ny,k)=awq3(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awq4(1:nx,1:ny,k)=awq4(1:nx,1:ny,k)+fr*0.0_rprec
-        !else if ((arg10 > 0.0_rprec) .AND. (arg12 < 0.0_rprec)) then
+        if ((arg10(i,j) > 0.0_rprec) .AND. (arg12(i,j) > 0.0_rprec)) then
+                awq1(i,j,k)=awq1(i,j,k)+fr*arg12(i,j)*arg10(i,j)
+                awq2(i,j,k)=awq2(i,j,k)+fr*0.0_rprec
+                awq3(i,j,k)=awq3(i,j,k)+fr*0.0_rprec
+                awq4(i,j,k)=awq4(i,j,k)+fr*0.0_rprec
+        else if ((arg10(i,j) > 0.0_rprec) .AND. (arg12(i,j) < 0.0_rprec)) then
 
-        !        awq1(1:nx,1:ny,k)=awq1(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awq2(1:nx,1:ny,k)=awq2(1:nx,1:ny,k)+fr*arg12*arg10
-        !        awq3(1:nx,1:ny,k)=awq3(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awq4(1:nx,1:ny,k)=awq4(1:nx,1:ny,k)+fr*0.0_rprec
+                awq1(i,j,k)=awq1(i,j,k)+fr*0.0_rprec
+                awq2(i,j,k)=awq2(i,j,k)+fr*arg12(i,j)*arg10(i,j)
+                awq3(i,j,k)=awq3(i,j,k)+fr*0.0_rprec
+                awq4(i,j,k)=awq4(i,j,k)+fr*0.0_rprec
 
-        ! else if ((arg10 < 0.0_rprec) .AND. (arg12 < 0.0_rprec)) then
+         else if ((arg10(i,j) < 0.0_rprec) .AND. (arg12(i,j) < 0.0_rprec)) then
 
-        !        awq1(1:nx,1:ny,k)=awq1(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awq2(1:nx,1:ny,k)=awq2(1:nx,1:ny,k)+fr*0.0_rprec
-        !        awq3(1:nx,1:ny,k)=awq3(1:nx,1:ny,k)+fr*arg12*arg10
-        !        awq4(1:nx,1:ny,k)=awq4(1:nx,1:ny,k)+fr*0.0_rprec
+                awq1(i,j,k)=awq1(i,j,k)+fr*0.0_rprec
+                awq2(i,j,k)=awq2(i,j,k)+fr*0.0_rprec
+                awq3(i,j,k)=awq3(i,j,k)+fr*arg12(i,j)*arg10(i,j)
+                awq4(i,j,k)=awq4(i,j,k)+fr*0.0_rprec
 
-        !else
-         !       awq1(1:nx,1:ny,k)=awq1(1:nx,1:ny,k)+fr*0.0_rprec
-         !       awq2(1:nx,1:ny,k)=awq2(1:nx,1:ny,k)+fr*0.0_rprec
-         !       awq3(1:nx,1:ny,k)=awq3(1:nx,1:ny,k)+fr*0.0_rprec
-         !       awq4(1:nx,1:ny,k)=awq4(1:nx,1:ny,k)+fr*arg12*arg10
-        !end if
-
+        else
+                awq1(i,j,k)=awq1(i,j,k)+fr*0.0_rprec
+                awq2(i,j,k)=awq2(i,j,k)+fr*0.0_rprec
+                awq3(i,j,k)=awq3(i,j,k)+fr*0.0_rprec
+                awq4(i,j,k)=awq4(i,j,k)+fr*arg12(i,j)*arg10(i,j)
+        end if
+        
+       
+end do 
+end do
+end if
+ 
 end do
 !end do
 !end do
 !---------------
 
-if (mod(jt,p_count)==0) then
+if (mod(jt_total,p_count)==0) then
         allocate(avg_out(1:nx,1:ny,1:(nz_tot-1)));
 
-        call collocate_MPI_averages_SHH(au,avg_out,120,'u')
-        call collocate_MPI_averages_SHH(av,avg_out,121,'v')
-        call collocate_MPI_averages_SHH(aw,avg_out,122,'w')
-        call collocate_MPI_averages_SHH(ap,avg_out,123,'p')
-        !call collocate_MPI_averages_SHH(apf,avg_out,124,'pf')
-        call collocate_MPI_averages_SHH(atheta,avg_out,125,'theta')
-        call collocate_MPI_averages_SHH(aq,avg_out,126,'q')
-        call collocate_MPI_averages_SHH(p2,avg_out,127,'p2')
-        !call collocate_MPI_averages_SHH(pf2,avg_out,128,'pf2')
-        call collocate_MPI_averages_SHH(u2,avg_out,129,'u2')
-        call collocate_MPI_averages_SHH(v2,avg_out,130,'v2')
-        call collocate_MPI_averages_SHH(w2,avg_out,131,'w2')
-        call collocate_MPI_averages_SHH(theta2,avg_out,132,'T2')
-        call collocate_MPI_averages_SHH(q2,avg_out,133,'q2')
-        call collocate_MPI_averages_SHH(u3,avg_out,134,'u3')
-        call collocate_MPI_averages_SHH(v3,avg_out,135,'v3')
-        call collocate_MPI_averages_SHH(w3,avg_out,136,'w3')
-        call collocate_MPI_averages_SHH(q3,avg_out,137,'q3')
-        call collocate_MPI_averages_SHH(T3,avg_out,138,'T3')
-        call collocate_MPI_averages_SHH(adudx,avg_out,139,'dudx')
-        call collocate_MPI_averages_SHH(adudy,avg_out,140,'dudy')
-        call collocate_MPI_averages_SHH(adudz,avg_out,141,'dudz')
-        call collocate_MPI_averages_SHH(advdx,avg_out,142,'dvdx')
-        call collocate_MPI_averages_SHH(advdy,avg_out,143,'dvdy')
-        call collocate_MPI_averages_SHH(advdz,avg_out,144,'dvdz')
-        call collocate_MPI_averages_SHH(adwdx,avg_out,145,'dwdx')
-        call collocate_MPI_averages_SHH(adwdy,avg_out,146,'dwdy')
-        call collocate_MPI_averages_SHH(adwdz,avg_out,147,'dwdz')
-        call collocate_MPI_averages_SHH(adTdx,avg_out,148,'dTdx')
-        call collocate_MPI_averages_SHH(adTdy,avg_out,149,'dTdy')
-        call collocate_MPI_averages_SHH(adTdz,avg_out,150,'dTdz')
-        call collocate_MPI_averages_SHH(adqdx,avg_out,151,'dqdx')
-        call collocate_MPI_averages_SHH(adqdy,avg_out,152,'dqdy')
-        call collocate_MPI_averages_SHH(adqdz,avg_out,153,'dqdz')
-        call collocate_MPI_averages_SHH(adpdx,avg_out,154,'dpdx')
-        call collocate_MPI_averages_SHH(adpdy,avg_out,155,'dpdy')
-        call collocate_MPI_averages_SHH(adpdz,avg_out,156,'dpdz')
-        call collocate_MPI_averages_SHH(tke,avg_out,157,'tke')
-        call collocate_MPI_averages_SHH(awe,avg_out,158,'we')
-        call collocate_MPI_averages_SHH(aue,avg_out,159,'ue')
-        call collocate_MPI_averages_SHH(ave,avg_out,160,'ve')
-        call collocate_MPI_averages_SHH(auw,avg_out,161,'uw')
-        call collocate_MPI_averages_SHH(avw,avg_out,162,'vw')
-        call collocate_MPI_averages_SHH(awt,avg_out,163,'wt')
-        call collocate_MPI_averages_SHH(awq,avg_out,164,'wq')
-        call collocate_MPI_averages_SHH(aut,avg_out,165,'ut')
-        call collocate_MPI_averages_SHH(avt,avg_out,166,'vt')
-        call collocate_MPI_averages_SHH(auq,avg_out,167,'uq')
-        call collocate_MPI_averages_SHH(avq,avg_out,168,'vq')
-        call collocate_MPI_averages_SHH(auv,avg_out,169,'uv')
-        call collocate_MPI_averages_SHH(awuu,avg_out,170,'wuu')
-        call collocate_MPI_averages_SHH(awvv,avg_out,171,'wvv')
-        call collocate_MPI_averages_SHH(awtt,avg_out,172,'wtt')
-        call collocate_MPI_averages_SHH(awqq,avg_out,173,'wqq')
-        call collocate_MPI_averages_SHH(awwu,avg_out,174,'wwu')
-        call collocate_MPI_averages_SHH(awwv,avg_out,175,'wwv')
-        call collocate_MPI_averages_SHH(awwt,avg_out,176,'wwt')
-        call collocate_MPI_averages_SHH(awwq,avg_out,177,'wwq')
-        !call collocate_MPI_averages_SHH(pi1_t,avg_out,178,'pi1t')
-        !call collocate_MPI_averages_SHH(pi2_t,avg_out,179,'pi2t')
-        !call collocate_MPI_averages_SHH(pi3_t,avg_out,180,'pi3t')
-        !call collocate_MPI_averages_SHH(pi1_q,avg_out,181,'pi1q')
-        !call collocate_MPI_averages_SHH(pi2_q,avg_out,182,'pi2q')
-        !call collocate_MPI_averages_SHH(pi3_q,avg_out,183,'pi3q')
-        call collocate_MPI_averages_SHH(atxx,avg_out,184,'txx')
-        call collocate_MPI_averages_SHH(atxy,avg_out,185,'txy')
-        call collocate_MPI_averages_SHH(atxz,avg_out,186,'txz')
-        call collocate_MPI_averages_SHH(atyy,avg_out,187,'tyy')
-        call collocate_MPI_averages_SHH(atyz,avg_out,188,'tyz')
-        call collocate_MPI_averages_SHH(atzz,avg_out,189,'tzz')
-        call collocate_MPI_averages_SHH(aup,avg_out,190,'up')
-        call collocate_MPI_averages_SHH(avp,avg_out,191,'vp')
-        call collocate_MPI_averages_SHH(awp,avg_out,192,'wp')
-        call collocate_MPI_averages_SHH(atp,avg_out,193,'tp')
-        call collocate_MPI_averages_SHH(aqp,avg_out,194,'qp')
-        call collocate_MPI_averages_SHH(atq,avg_out,195,'tq')
-        call collocate_MPI_averages_SHH(aupx,avg_out,196,'upx')
-        call collocate_MPI_averages_SHH(aupy,avg_out,197,'upy')
-        call collocate_MPI_averages_SHH(aupz,avg_out,198,'upz')
-        call collocate_MPI_averages_SHH(avpx,avg_out,199,'vpx')
-        call collocate_MPI_averages_SHH(avpy,avg_out,200,'vpy')
-        call collocate_MPI_averages_SHH(avpz,avg_out,201,'vpz')
-        call collocate_MPI_averages_SHH(awpx,avg_out,202,'wpx')
-        call collocate_MPI_averages_SHH(awpy,avg_out,203,'wpy')
-        call collocate_MPI_averages_SHH(awpz,avg_out,204,'wpz')
-        call collocate_MPI_averages_SHH(at11ux,avg_out,205,'t11ux')
-        call collocate_MPI_averages_SHH(at12uy,avg_out,206,'t12uy')
-        call collocate_MPI_averages_SHH(at13uz,avg_out,207,'t13uz')
-        call collocate_MPI_averages_SHH(at21vx,avg_out,208,'t21vx')
-        call collocate_MPI_averages_SHH(at22vy,avg_out,209,'t22vy')
-        call collocate_MPI_averages_SHH(at23vz,avg_out,210,'t23vz')
-        call collocate_MPI_averages_SHH(at31wx,avg_out,211,'t31wx')
-        call collocate_MPI_averages_SHH(at32wy,avg_out,212,'t32wy')
-        call collocate_MPI_averages_SHH(at33wz,avg_out,213,'t33wz')
-        call collocate_MPI_averages_SHH(apux,avg_out,214,'pux')
-        call collocate_MPI_averages_SHH(apuy,avg_out,215,'puy')
-        call collocate_MPI_averages_SHH(apuz,avg_out,216,'puz')
-        call collocate_MPI_averages_SHH(apvx,avg_out,217,'pvx')
-        call collocate_MPI_averages_SHH(apvy,avg_out,218,'pvy')
-        call collocate_MPI_averages_SHH(apvz,avg_out,219,'pvz')
-        call collocate_MPI_averages_SHH(apwx,avg_out,220,'pwx')
-        call collocate_MPI_averages_SHH(apwy,avg_out,221,'pwy')
-        call collocate_MPI_averages_SHH(apwz,avg_out,222,'pwz')
-        call collocate_MPI_averages_SHH(aptx,avg_out,223,'ptx')
-        call collocate_MPI_averages_SHH(apty,avg_out,224,'pty')
-        call collocate_MPI_averages_SHH(aptz,avg_out,225,'ptz')
-        call collocate_MPI_averages_SHH(apqx,avg_out,226,'pqx')
-        call collocate_MPI_averages_SHH(apqy,avg_out,227,'pqy')
-        call collocate_MPI_averages_SHH(apqz,avg_out,228,'pqz')
-        call collocate_MPI_averages_SHH(at11s11,avg_out,229,'t11s11')
-        call collocate_MPI_averages_SHH(at12s12,avg_out,230,'t12s12')
-        call collocate_MPI_averages_SHH(at13s13,avg_out,231,'t13s13')
-        call collocate_MPI_averages_SHH(at22s22,avg_out,232,'t22s22')
-        call collocate_MPI_averages_SHH(at23s23,avg_out,233,'t23s23')
-        call collocate_MPI_averages_SHH(at33s33,avg_out,234,'t33s33')
-        !call collocate_MPI_averages_SHH(api1_tx,avg_out,235,'pi1_tx')
-        !call collocate_MPI_averages_SHH(api2_ty,avg_out,236,'pi2_ty')
-        !call collocate_MPI_averages_SHH(api3_tz,avg_out,237,'pi3_tz')
-        !call collocate_MPI_averages_SHH(api1_qx,avg_out,238,'pi1_qx')
-        !call collocate_MPI_averages_SHH(api2_qy,avg_out,239,'pi2_qy')
-        !call collocate_MPI_averages_SHH(api3_qz,avg_out,240,'pi3_qz')
-        call collocate_MPI_averages_SHH(as11,avg_out,241,'s11')
-        call collocate_MPI_averages_SHH(as12,avg_out,242,'s12')
-        call collocate_MPI_averages_SHH(as13,avg_out,243,'s13')
-        call collocate_MPI_averages_SHH(as22,avg_out,244,'s22')
-        call collocate_MPI_averages_SHH(as23,avg_out,245,'s23')
-        call collocate_MPI_averages_SHH(as33,avg_out,246,'s33')
-        call collocate_MPI_averages_SHH(aut11,avg_out,247,'ut11')
-        call collocate_MPI_averages_SHH(aut12,avg_out,248,'ut12')
-        call collocate_MPI_averages_SHH(aut13,avg_out,249,'ut13')
-        call collocate_MPI_averages_SHH(avt21,avg_out,250,'vt21')
-        call collocate_MPI_averages_SHH(avt22,avg_out,251,'vt22')
-        call collocate_MPI_averages_SHH(avt23,avg_out,252,'vt23')
-        call collocate_MPI_averages_SHH(awt31,avg_out,253,'wt31')
-        call collocate_MPI_averages_SHH(awt32,avg_out,254,'wt32')
-        call collocate_MPI_averages_SHH(awt33,avg_out,255,'wt33')
-        !call collocate_MPI_averages_SHH(asgst1,avg_out,256,'sgst1')
-        !call collocate_MPI_averages_SHH(asgst2,avg_out,257,'sgst2')
-        call collocate_MPI_averages_SHH(asgst3,avg_out,258,'sgst3')
-        !call collocate_MPI_averages_SHH(asgsq1,avg_out,259,'sgsq1')
-        !call collocate_MPI_averages_SHH(asgsq2,avg_out,260,'sgsq2')
-        call collocate_MPI_averages_SHH(asgsq3,avg_out,261,'sgsq3')
-        !call collocate_MPI_averages_SHH(auw1,avg_out,262,'uw1')
-        !call collocate_MPI_averages_SHH(auw2,avg_out,263,'uw2')
-        !call collocate_MPI_averages_SHH(auw3,avg_out,264,'uw3')
-        !call collocate_MPI_averages_SHH(auw4,avg_out,265,'uw4')
-        !call collocate_MPI_averages_SHH(awt1,avg_out,266,'wt1')
-        !call collocate_MPI_averages_SHH(awt2,avg_out,267,'wt2')
-        !call collocate_MPI_averages_SHH(awt3,avg_out,268,'wt3')
-        !call collocate_MPI_averages_SHH(awt4,avg_out,269,'wt4')
-        !call collocate_MPI_averages_SHH(awq1,avg_out,270,'wq1')
-        !call collocate_MPI_averages_SHH(awq2,avg_out,271,'wq2')
-        !call collocate_MPI_averages_SHH(awq3,avg_out,272,'wq3')
-        !call collocate_MPI_averages_SHH(awq4,avg_out,273,'wq4')
-        !call collocate_MPI_averages_SHH(atpx,avg_out,274,'tpx')
-        !call collocate_MPI_averages_SHH(atpy,avg_out,275,'tpy')
-        !call collocate_MPI_averages_SHH(atpz,avg_out,276,'tpz')
-        call collocate_MPI_averages_SHH(aactual_T,avg_out,277,'actual_T')
-        call collocate_MPI_averages_SHH(aactual_Tv,avg_out,278,'actual_Tv')
-        call collocate_MPI_averages_SHH(apr_atm,avg_out,279,'pr_atm')
-        call collocate_MPI_averages_SHH(arel_hum,avg_out,280,'rel_hum')
-        call collocate_MPI_averages_SHH(arel_hum_q,avg_out,281,'rel_hum_q')
-        call collocate_MPI_averages_SHH(avapor_pr,avg_out,282,'vapor_pr')
-        call collocate_MPI_averages_SHH(asat_vapor_pr,avg_out,283,'sat_vapor_pr')
-        call collocate_MPI_averages_SHH(asat_qmix,avg_out,284,'sat_qmix')
-        call collocate_MPI_averages_SHH(azlcl_all,avg_out,285,'zlcl_all')
-        !call collocate_MPI_averages_SHH(avw1,avg_out,286,'vw1')
-        !call collocate_MPI_averages_SHH(avw2,avg_out,287,'vw2')
-        !call collocate_MPI_averages_SHH(avw3,avg_out,288,'vw3')
-        !call collocate_MPI_averages_SHH(avw4,avg_out,289,'vw4')
-        !call collocate_MPI_averages_SHH(aqpx,avg_out,290,'qpx')
-        !call collocate_MPI_averages_SHH(aqpy,avg_out,291,'qpy')
-        !call collocate_MPI_averages_SHH(aqpz,avg_out,292,'qpz')
+        call collocate_MPI_averages_SHH2(au,avg_out,120,'u')
+        call collocate_MPI_averages_SHH2(av,avg_out,121,'v')
+        call collocate_MPI_averages_SHH2(aw,avg_out,122,'w')
+        call collocate_MPI_averages_SHH2(atheta,avg_out,125,'theta')
+        call collocate_MPI_averages_SHH2(aq,avg_out,126,'q')
+        call collocate_MPI_averages_SHH2(u2,avg_out,129,'u2')
+        call collocate_MPI_averages_SHH2(v2,avg_out,130,'v2')
+        call collocate_MPI_averages_SHH2(w2,avg_out,131,'w2')
+        call collocate_MPI_averages_SHH2(theta2,avg_out,132,'T2')
+        call collocate_MPI_averages_SHH2(q2,avg_out,133,'q2')
+        call collocate_MPI_averages_SHH2(auw,avg_out,161,'uw')
+        call collocate_MPI_averages_SHH2(avw,avg_out,162,'vw')
+        call collocate_MPI_averages_SHH2(awt,avg_out,163,'wt')
+        call collocate_MPI_averages_SHH2(awq,avg_out,164,'wq')
+        call collocate_MPI_averages_SHH2(atxz,avg_out,186,'txz')
+        call collocate_MPI_averages_SHH2(atyz,avg_out,188,'tyz')
+        call collocate_MPI_averages_SHH2(asgst3,avg_out,258,'sgst3')
+        call collocate_MPI_averages_SHH2(asgsq3,avg_out,261,'sgsq3')
+        call collocate_MPI_averages_SHH2(ac,avg_out,285,'co2')
+        
+        call collocate_MPI_averages_SHH2(ap,avg_out,123,'p')
+        call collocate_MPI_averages_SHH2(p2,avg_out,127,'p2')
+        call collocate_MPI_averages_SHH2(u3,avg_out,134,'u3')
+        call collocate_MPI_averages_SHH2(v3,avg_out,135,'v3')
+        call collocate_MPI_averages_SHH2(w3,avg_out,136,'w3')
+        call collocate_MPI_averages_SHH2(q3,avg_out,137,'q3')
+        call collocate_MPI_averages_SHH2(awc,avg_out,138,'wc')
+        call collocate_MPI_averages_SHH2(ac2,avg_out,139,'c2')
+        call collocate_MPI_averages_SHH2(adcodz,avg_out,140,'dcdz')
+        call collocate_MPI_averages_SHH2(adudz,avg_out,141,'dudz')
+        call collocate_MPI_averages_SHH2(awwc,avg_out,142,'wwc')
+        call collocate_MPI_averages_SHH2(awcc,avg_out,143,'wcc')
+        call collocate_MPI_averages_SHH2(advdz,avg_out,144,'dvdz')
+        call collocate_MPI_averages_SHH2(asgsc3,avg_out,145,'sgsc3')
+    !    call collocate_MPI_averages_SHH2(adwdy,avg_out,146,'dwdy')
+        call collocate_MPI_averages_SHH2(adwdz,avg_out,147,'dwdz')
+        call collocate_MPI_averages_SHH2(afu_c,avg_out,148,'fu_c')
+        call collocate_MPI_averages_SHH2(afv_c,avg_out,149,'fv_c')
+        call collocate_MPI_averages_SHH2(adTdz,avg_out,150,'dTdz')
+        call collocate_MPI_averages_SHH2(afw_c,avg_out,151,'fw_c')
+        call collocate_MPI_averages_SHH2(aC_d,avg_out,152,'C_d')
+        call collocate_MPI_averages_SHH2(adqdz,avg_out,153,'dqdz')
+    !    call collocate_MPI_averages_SHH2(adpdx,avg_out,154,'dpdx')
+    !    call collocate_MPI_averages_SHH2(adpdy,avg_out,155,'dpdy')
+        call collocate_MPI_averages_SHH2(adpdz,avg_out,156,'dpdz')
+        call collocate_MPI_averages_SHH2(tke,avg_out,157,'tke')
+        call collocate_MPI_averages_SHH2(awe,avg_out,158,'we')
+     !   call collocate_MPI_averages_SHH2(aue,avg_out,159,'ue')
+     !   call collocate_MPI_averages_SHH2(ave,avg_out,160,'ve')
 
-        deallocate(avg_out)
+     !   call collocate_MPI_averages_SHH2(aut,avg_out,165,'ut')
+      !  call collocate_MPI_averages_SHH2(avt,avg_out,166,'vt')
+      !  call collocate_MPI_averages_SHH2(auq,avg_out,167,'uq')
+      !  call collocate_MPI_averages_SHH2(avq,avg_out,168,'vq')
+      !  call collocate_MPI_averages_SHH2(auv,avg_out,169,'uv')
+        call collocate_MPI_averages_SHH2(awuu,avg_out,170,'wuu')
+        call collocate_MPI_averages_SHH2(awvv,avg_out,171,'wvv')
+        call collocate_MPI_averages_SHH2(awtt,avg_out,172,'wtt')
+        call collocate_MPI_averages_SHH2(awqq,avg_out,173,'wqq')
+        call collocate_MPI_averages_SHH2(awwu,avg_out,174,'wwu')
+        call collocate_MPI_averages_SHH2(awwv,avg_out,175,'wwv')
+        call collocate_MPI_averages_SHH2(awwt,avg_out,176,'wwt')
+        call collocate_MPI_averages_SHH2(awwq,avg_out,177,'wwq')
+        !call collocate_MPI_averages_SHH2(pi1_t,avg_out,178,'pi1t')
+        !call collocate_MPI_averages_SHH2(pi2_t,avg_out,179,'pi2t')
+        !call collocate_MPI_averages_SHH2(pi3_t,avg_out,180,'pi3t')
+        !call collocate_MPI_averages_SHH2(pi1_q,avg_out,181,'pi1q')
+        !call collocate_MPI_averages_SHH2(pi2_q,avg_out,182,'pi2q')
+  
+        call collocate_MPI_averages_SHH2(atxx,avg_out,184,'txx')
+        call collocate_MPI_averages_SHH2(atxy,avg_out,185,'txy')
+        call collocate_MPI_averages_SHH2(atyy,avg_out,187,'tyy')
+        call collocate_MPI_averages_SHH2(atzz,avg_out,189,'tzz')
+       
+        call collocate_MPI_averages_SHH2(awp,avg_out,192,'wp')
+        call collocate_MPI_averages_SHH2(aupx,avg_out,196,'upx')
+        call collocate_MPI_averages_SHH2(aupy,avg_out,197,'upy')
+        call collocate_MPI_averages_SHH2(aupz,avg_out,198,'upz')
+        call collocate_MPI_averages_SHH2(avpx,avg_out,199,'vpx')
+        call collocate_MPI_averages_SHH2(avpy,avg_out,200,'vpy')
+        call collocate_MPI_averages_SHH2(avpz,avg_out,201,'vpz')
+        call collocate_MPI_averages_SHH2(awpx,avg_out,202,'wpx')
+        call collocate_MPI_averages_SHH2(awpy,avg_out,203,'wpy')
+        call collocate_MPI_averages_SHH2(awpz,avg_out,204,'wpz')
+        call collocate_MPI_averages_SHH2(at11ux,avg_out,205,'t11ux')
+        call collocate_MPI_averages_SHH2(at12uy,avg_out,206,'t12uy')
+        call collocate_MPI_averages_SHH2(at13uz,avg_out,207,'t13uz')
+        call collocate_MPI_averages_SHH2(at21vx,avg_out,208,'t21vx')
+        call collocate_MPI_averages_SHH2(at22vy,avg_out,209,'t22vy')
+        call collocate_MPI_averages_SHH2(at23vz,avg_out,210,'t23vz')
+        call collocate_MPI_averages_SHH2(at31wx,avg_out,211,'t31wx')
+        call collocate_MPI_averages_SHH2(at32wy,avg_out,212,'t32wy')
+        call collocate_MPI_averages_SHH2(at33wz,avg_out,213,'t33wz')
+        call collocate_MPI_averages_SHH2(apux,avg_out,214,'pux')
+        call collocate_MPI_averages_SHH2(apuy,avg_out,215,'puy')
+        call collocate_MPI_averages_SHH2(apuz,avg_out,216,'puz')
+        call collocate_MPI_averages_SHH2(apvx,avg_out,217,'pvx')
+        call collocate_MPI_averages_SHH2(apvy,avg_out,218,'pvy')
+        call collocate_MPI_averages_SHH2(apvz,avg_out,219,'pvz')
+        call collocate_MPI_averages_SHH2(apwx,avg_out,220,'pwx')
+        call collocate_MPI_averages_SHH2(apwy,avg_out,221,'pwy')
+        call collocate_MPI_averages_SHH2(apwz,avg_out,222,'pwz')
+        call collocate_MPI_averages_SHH2(aptx,avg_out,223,'ptx')
+        call collocate_MPI_averages_SHH2(apty,avg_out,224,'pty')
+        call collocate_MPI_averages_SHH2(aptz,avg_out,225,'ptz')
+        call collocate_MPI_averages_SHH2(apqx,avg_out,226,'pqx')
+        call collocate_MPI_averages_SHH2(apqy,avg_out,227,'pqy')
+        call collocate_MPI_averages_SHH2(apqz,avg_out,228,'pqz')
+        call collocate_MPI_averages_SHH2(at11s11,avg_out,229,'t11s11')
+        call collocate_MPI_averages_SHH2(at12s12,avg_out,230,'t12s12')
+        call collocate_MPI_averages_SHH2(at13s13,avg_out,231,'t13s13')
+        call collocate_MPI_averages_SHH2(at22s22,avg_out,232,'t22s22')
+        call collocate_MPI_averages_SHH2(at23s23,avg_out,233,'t23s23')
+        call collocate_MPI_averages_SHH2(at33s33,avg_out,234,'t33s33')
+
+        call collocate_MPI_averages_SHH2(as11,avg_out,241,'s11')
+        call collocate_MPI_averages_SHH2(as12,avg_out,242,'s12')
+        call collocate_MPI_averages_SHH2(as13,avg_out,243,'s13')
+        call collocate_MPI_averages_SHH2(as22,avg_out,244,'s22')
+        call collocate_MPI_averages_SHH2(as23,avg_out,245,'s23')
+        call collocate_MPI_averages_SHH2(as33,avg_out,246,'s33')
+        call collocate_MPI_averages_SHH2(aut11,avg_out,247,'ut11')
+        call collocate_MPI_averages_SHH2(aut12,avg_out,248,'ut12')
+        call collocate_MPI_averages_SHH2(aut13,avg_out,249,'ut13')
+        call collocate_MPI_averages_SHH2(avt21,avg_out,250,'vt21')
+        call collocate_MPI_averages_SHH2(avt22,avg_out,251,'vt22')
+        call collocate_MPI_averages_SHH2(avt23,avg_out,252,'vt23')
+        call collocate_MPI_averages_SHH2(awt31,avg_out,253,'wt31')
+        call collocate_MPI_averages_SHH2(awt32,avg_out,254,'wt32')
+        call collocate_MPI_averages_SHH2(awt33,avg_out,255,'wt33')
+        !call collocate_MPI_averages_SHH2(asgst1,avg_out,256,'sgst1')
+        !call collocate_MPI_averages_SHH2(asgst2,avg_out,257,'sgst2')
+
+        !call collocate_MPI_averages_SHH2(auw1,avg_out,262,'uw1')
+        !call collocate_MPI_averages_SHH2(auw2,avg_out,263,'uw2')
+        !call collocate_MPI_averages_SHH2(auw3,avg_out,264,'uw3')
+        !call collocate_MPI_averages_SHH2(auw4,avg_out,265,'uw4')
+        !call collocate_MPI_averages_SHH2(awt1,avg_out,266,'wt1')
+        !call collocate_MPI_averages_SHH2(awt2,avg_out,267,'wt2')
+        !call collocate_MPI_averages_SHH2(awt3,avg_out,268,'wt3')
+        !call collocate_MPI_averages_SHH2(awt4,avg_out,269,'wt4')
+        !call collocate_MPI_averages_SHH2(awq1,avg_out,270,'wq1')
+        !call collocate_MPI_averages_SHH2(awq2,avg_out,271,'wq2')
+        !call collocate_MPI_averages_SHH2(awq3,avg_out,272,'wq3')
+        !call collocate_MPI_averages_SHH2(awq4,avg_out,273,'wq4')
+        !call collocate_MPI_averages_SHH2(atpx,avg_out,274,'tpx')
+        !call collocate_MPI_averages_SHH2(atpy,avg_out,275,'tpy')
+        !call collocate_MPI_averages_SHH2(atpz,avg_out,276,'tpz')
+ !       call collocate_MPI_averages_SHH2(aactual_T,avg_out,277,'actual_T')
+ !       call collocate_MPI_averages_SHH2(aactual_Tv,avg_out,278,'actual_Tv')
+        call collocate_MPI_averages_SHH2(apr_atm,avg_out,279,'pr_atm')
+        call collocate_MPI_averages_SHH2(arel_hum,avg_out,280,'rel_hum')
+        call collocate_MPI_averages_SHH2(arel_hum_q,avg_out,281,'rel_hum_q')
+        call collocate_MPI_averages_SHH2(avapor_pr,avg_out,282,'vapor_pr')
+        call collocate_MPI_averages_SHH2(asat_vapor_pr,avg_out,283,'sat_vapor_pr')
+        call collocate_MPI_averages_SHH2(asat_qmix,avg_out,284,'sat_qmix')
+ if(jt_total .GE. 2*p_count) then
+        call collocate_MPI_averages_SHH2(auw1,avg_out,190,'uw1')
+        call collocate_MPI_averages_SHH2(auw2,avg_out,191,'uw2')
+        call collocate_MPI_averages_SHH2(auw3,avg_out,193,'uw3')
+        call collocate_MPI_averages_SHH2(auw4,avg_out,194,'uw4')
+        call collocate_MPI_averages_SHH2(awt1,avg_out,195,'wt1')
+        call collocate_MPI_averages_SHH2(awt2,avg_out,235,'wt2')
+        call collocate_MPI_averages_SHH2(awt3,avg_out,236,'wt3')
+        call collocate_MPI_averages_SHH2(awt4,avg_out,237,'wt4')
+        call collocate_MPI_averages_SHH2(awq1,avg_out,238,'wq1')
+        call collocate_MPI_averages_SHH2(awq2,avg_out,239,'wq2')
+        call collocate_MPI_averages_SHH2(awq3,avg_out,240,'wq3')
+        call collocate_MPI_averages_SHH2(awq4,avg_out,183,'wq4')
+end if
+
+     
+     
+     deallocate(avg_out)
 !
 !!VK Zero out the outputted averages !!
 
-au=0._rprec;av=0._rprec;aw=0._rprec;ap=0._rprec;
+         au=0._rprec;av=0._rprec;aw=0._rprec;ap=0._rprec;
          !apf=0._rprec;atheta=0._rprec;
          atheta=0._rprec;
         aq=0._rprec; p2=0._rprec; u2=0._rprec;v2=0._rprec;
@@ -1195,14 +1192,17 @@ au=0._rprec;av=0._rprec;aw=0._rprec;ap=0._rprec;
         arg1=0._rprec;arg2=0._rprec;arg3=0._rprec;arg4=0._rprec;arg4f=0._rprec;arg5=0._rprec;arg6=0._rprec;
         arg7=0._rprec;arg8=0._rprec;arg9=0._rprec;arg10=0._rprec;arg11=0._rprec;
         arg12=0._rprec;ux=0._rprec;uy=0._rprec;uz=0._rprec;vx=0._rprec;vy=0._rprec;
-        !awt1=0._rprec;awt2=0._rprec;awt3=0._rprec;awt4=0._rprec;awq1=0._rprec;awq2=0._rprec;
-        !awq3=0._rprec;awq4=0._rprec;auw1=0._rprec;auw2=0._rprec;auw3=0._rprec;auw4=0._rprec;
+        awt1=0._rprec;awt2=0._rprec;awt3=0._rprec;awt4=0._rprec;awq1=0._rprec;awq2=0._rprec;
+        awq3=0._rprec;awq4=0._rprec;auw1=0._rprec;auw2=0._rprec;auw3=0._rprec;auw4=0._rprec;
         !avw1=0._rprec;avw2=0._rprec;avw3=0._rprec;avw4=0._rprec;
         aactual_T=0._rprec;aactual_Tv=0._rprec;apr_atm=0._rprec;arel_hum=0._rprec;arel_hum_q=0._rprec;
         avapor_pr=0._rprec;asat_vapor_pr=0._rprec;asat_qmix=0._rprec;azlcl_all=0._rprec;
-
+        afu_c=0._rprec; afv_c=0._rprec; afw_c=0._rprec; aC_d=0._rprec;
+        ac=0._rprec; ac2=0._rprec; awc=0._rprec; awwc=0._rprec; 
+        awcc=0._rprec; asgsc3=0._rprec; adcodz=0._rprec;
 end if
 5168     format(1400(E15.6))
+
 end subroutine MM_XYZ_Out
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !--The following subroutine does the collocation of the MPI arrays for
@@ -1238,7 +1238,7 @@ $endif
         open(file_ind,file=trim(local_filename),status="unknown",position="append")
            do ind3=1,nz_tot-1
            do ind2=1,ny
-            write(file_ind,5168)jt*dt,(avg_var_tot_domain(ind1,ind2,ind3),ind1=1,nx)
+            write(file_ind,5168)(avg_var_tot_domain(ind1,ind2,ind3),ind1=1,nx)
            end do
            end do
         close(file_ind)
@@ -1250,23 +1250,73 @@ end subroutine collocate_MPI_averages_SHH
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!--The following subroutine does the collocation of the MPI arrays for
+! SHHOutput Subroutine
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine collocate_MPI_averages_SHH2(avg_var_proc,avg_var_tot_domain,file_ind,filename_str)
+!subroutine collocate_MPI_averages(avg_var_proc,avg_var_tot_domain,file_ind)
+use param
+$if ($MPI)
+  integer :: recvcounts(nproc)
+  integer :: displs(nproc)
+$endif
+integer :: ind1,ind2,ind3,file_ind
+character (*),intent(in) :: filename_str
+character (len=256) :: local_filename
+real(kind=rprec),dimension(nx,ny,nz-1)::avg_var_proc
+real(kind=rprec),dimension(nx,ny,nz_tot-1)::avg_var_tot_domain
+
+local_filename=path//'output/aver_'//trim(filename_str)//'.out'
+
+avg_var_tot_domain=0._rprec
+$if ($MPI)
+  recvcounts = size (avg_var_proc)
+  displs = coord_of_rank * recvcounts
+  call mpi_gatherv (avg_var_proc(1,1,1), size (avg_var_proc), MPI_RPREC,       &
+                    avg_var_tot_domain(1,1,1), recvcounts, displs, MPI_RPREC, &
+                    rank_of_coord(0), comm, ierr)
+$else
+  avg_var_tot_domain=avg_var_proc
+$endif
+
+  if((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
+        open(file_ind,file=trim(local_filename),status="unknown",position="append")
+           do ind3=1,nz_tot-1
+           do ind2=1,ny
+            write(file_ind,5168)(avg_var_tot_domain(ind1,ind2,ind3),ind1=1,nx)
+           end do
+           end do
+        close(file_ind)
+  end if
+
+
+5168     format(1400(E12.5))
+end subroutine collocate_MPI_averages_SHH2
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 !--assumes lun is open and positioned correctly
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine checkpoint (lun)
 
 use param,only:nz,S_FLAG
-use sim_param,only:u,v,w,RHSx,RHSy,RHSz,theta,qmix
+use sim_param,only:u,v,w,RHSx,RHSy,RHSz,theta,qmix,cmix
 use sgsmodule,only:Cs_opt2,F_LM,F_MM,F_QN,F_NN,G_LM,G_MM,G_QN,G_NN,Pr_t
-use scalars_module,only:RHS_T,sgs_t3,psi_m,psi_m0
+use scalars_module,only:RHS_T,sgs_t3
+use bottombc,only:psi_m,psi_m0,psi_h,psi_h0
 use scalars_module_q,only:RHS_q,sgs_q3
+use scalars_module_co,only:RHS_co,sgs_co3
 
 implicit none
 integer,intent(in)::lun
 
 if (S_FLAG) then ! WITH SCALARS
    write (lun) u(:,:,1:nz),v(:,:,1:nz),w(:,:,1:nz),theta(:,:,1:nz),   &
-               qmix(:,:,1:nz),RHSx(:,:,1:nz),RHSy(:,:,1:nz),RHSz(:,:,1:nz),          &
-               RHS_T(:,:,1:nz),RHS_q(:,:,1:nz),sgs_t3(:,:,1),sgs_q3(:,:,1),psi_m,psi_m0,Cs_opt2,&
+               qmix(:,:,1:nz),cmix(:,:,1:nz),RHSx(:,:,1:nz),RHSy(:,:,1:nz),RHSz(:,:,1:nz),          &
+               RHS_T(:,:,1:nz),RHS_q(:,:,1:nz),RHS_co(:,:,1:nz),sgs_t3(:,:,1),sgs_q3(:,:,1),&
+               sgs_co3(:,:,1),psi_m,psi_m0,psi_h,psi_h0,Cs_opt2,&
                F_LM,F_MM,F_QN,F_NN,G_LM,G_MM,G_QN,G_NN,Pr_t(:,:,1:nz)
 else ! No SCALARS
    write (lun) u(:,:,1:nz),v(:,:,1:nz),w(:,:,1:nz),          &

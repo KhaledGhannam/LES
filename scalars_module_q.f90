@@ -161,7 +161,7 @@ real(kind=rprec),dimension(ld_big,ny2,$lbz:nz):: u_m,v_m,w_m,dsdx_m,dsdy_m,dsdz_
  real(kind=rprec),dimension(ld_big,ny2,$lbz:nz):: RHS_m
 real(kind=rprec),dimension(nx,ny):: surf_flux_current,ustar_local,S_Surf,surf_flux,z_os,wq_s2
 real(kind=rprec),dimension(ld,ny):: scalar_node_1 ! test filtered and used for computing surface flux
-real(kind=rprec),dimension (ptypes):: ustar
+
 character (64) :: fname_hetero
 
 if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
@@ -182,7 +182,7 @@ if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
                     do i=1,Nx
                     do j=1,Ny 
                     surf_flux(i,j)=(S_Surf(i,j)-scalar_node_1(i,j))*vonk*ustar_local(i,j)&
-                                   /(dlog(dz/(2._rprec*z_os(i,j)))-psi_h(i,j))
+                                   /(dlog(dz/(2._rprec*z_os(i,j)))-psi_h(i,j)+ psi_h0(i,j))
                    end do 
                    end do
              end if

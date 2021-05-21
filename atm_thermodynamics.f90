@@ -12,11 +12,11 @@ $if ($MPI)
 $else
   $define $lbz 1
 $endif
-!! KMG: added sgs_t1 and sgs_t2 for horizontal sgs heat fluxes Pi_1 and Pi_2
+
 real(kind=rprec),dimension(ld,ny,$lbz:nz):: actual_T, actual_Tv, pr_atm,rel_hum, rel_hum_q,vapor_pr,sat_vapor_pr
 real(kind=rprec),dimension(ld,ny,$lbz:nz):: sat_qmix, zlcl_all
-real(kind=rprec),dimension(nx,ny):: zlcl_parcel
-real(kind=rprec)::zlcl_parcel_ave
+real(kind=rprec),dimension(nx,ny):: zlcl_parcel,arg17
+real(kind=rprec)::zlcl_parcel_ave, zlcl_parcel_ave2
 
 
 ! ------------
@@ -57,35 +57,42 @@ end do
 
 
 
-if ((jt_total .GE. 80000) .AND. (jt_total .LE. 100000) .AND.  modulo (jt_total, 20) == 0) then
-if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 1)) then
+!if ((jt_total .GE. 120000) .AND. (jt_total .LE. 144000) .AND.  modulo (jt_total, 40) == 0) then
+!if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 1)) then
 
-        zlcl_parcel(1:nx,1:ny)=1.5_rprec*dz*z_i + (cp/g)*(actual_T(1:nx,1:ny,1)*T_scale -55 - &
-                             (1/(actual_T(1:nx,1:ny,1)*T_scale-55) - &
-                             dlog(rel_hum_q(1:nx,1:ny,1))/2840)**(-1.0_rprec) )
+!        zlcl_parcel(1:nx,1:ny)=1.5_rprec*dz*z_i + (cp/g)*(actual_T(1:nx,1:ny,1)*T_scale -55 - &
+!                             (1/(actual_T(1:nx,1:ny,1)*T_scale-55) - &
+!                             dlog(rel_hum_q(1:nx,1:ny,1))/2840)**(-1.0_rprec) )
         
 
-      open(unit=8293,file=path//'output/zlcl_parcel.out',status="unknown",position="append")
-                do jy=1,ny
-                  write(8293,7187) (zlcl_parcel(jx,jy),jx=1,nx)
-                end do
-              close(8293)
-end if
-end if
+!      open(unit=8293,file=path//'output/zlcl_parcel.out',status="unknown",position="append")
+!                do jy=1,ny
+!                  write(8293,7187) (zlcl_parcel(jx,jy),jx=1,nx)
+!                end do
+!              close(8293)
+!end if
+!end if
 
-if ((jt_total .GE. 1000) .AND.  modulo (jt_total, 50) == 0) then
-if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 1)) then
-        zlcl_parcel_ave=1.5_rprec*dz*z_i + (cp/g)*(sum(actual_T(1:nx,1:ny,1))/float(nx*ny)*T_scale -55 - &
-                             (1/(sum(actual_T(1:nx,1:ny,1))/float(nx*ny)*T_scale-55) - &
-                             dlog(sum(rel_hum_q(1:nx,1:nx,1))/float(nx*ny))/2840)**(-1.0_rprec) )
+!if ((jt_total .GE. 1) .AND.  modulo (jt_total, 20) == 0) then
+!if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 1)) then
+        
+!        arg17(1:nx,1:ny)=1.5_rprec*dz*z_i + (cp/g)*(actual_T(1:nx,1:ny,1)*T_scale -55 - &
+!                             (1/(actual_T(1:nx,1:ny,1)*T_scale-55) - &
+!                             dlog(rel_hum_q(1:nx,1:ny,1))/2840)**(-1.0_rprec) )
+                             
+!        zlcl_parcel_ave2=1.5_rprec*dz*z_i + (cp/g)*(sum(actual_T(1:nx,1:ny,1))/float(nx*ny)*T_scale -55 - &
+!                             (1/(sum(actual_T(1:nx,1:ny,1))/float(nx*ny)*T_scale-55) - &
+!                             dlog(sum(rel_hum_q(1:nx,1:ny,1))/float(nx*ny))/2840)**(-1.0_rprec) )
+                             
+!        zlcl_parcel_ave=sum(arg17(1:nx,1:ny))/float(nx*ny)
 
-             open (unit=8294,file=path//'output/zlcl_parcel_ave.out',status="unknown",position="append")
-    write(8294,7187) zlcl_parcel_ave
-    close(8294) 
-end if
-end if
+!             open (unit=8294,file=path//'output/zlcl_parcel_ave.out',status="unknown",position="append")
+!    write(8294,7187) zlcl_parcel_ave, zlcl_parcel_ave2
+!    close(8294) 
+!end if
+!end if
 
-7187     format(1400(E14.5))
+!7187     format(1400(E14.5))
 
 $if ($MPI)
     !--exchange ghost-node information

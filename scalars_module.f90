@@ -45,8 +45,6 @@ integer, parameter:: wt_s_vector_dim1=no_days*86400/300+1
 real(kind=rprec),dimension(wt_s_vector_dim1,1) :: wt_s_vector
 ! Variables for heterogeneity analysis
 ! hetero_array_freqz = number of time steps equivalent to 20 seconds
-integer,parameter:: hetero_array_freqz=int(20/dt_dim),hetero_count_out=p_count
-integer,save::time_ind
 
 !--MM 2015: Added Artificially Moving(Heating) Inversion:
 integer, parameter :: nz_global = (nz-1) * nproc
@@ -250,7 +248,7 @@ real(kind=rprec),dimension(ld_big,ny2,$lbz:nz):: u_m,v_m,w_m,dsdx_m,dsdy_m,dsdz_
  real(kind=rprec),dimension(ld_big,ny2,$lbz:nz):: RHS_m
 real(kind=rprec),dimension(nx,ny):: ustar_local,S_Surf,surf_flux,z_os,wt_s2,surf_flux_current
 real(kind=rprec),dimension(ld,ny):: scalar_node_1 ! test filtered and used for computing surface flux
-real(kind=rprec),dimension (ptypes):: ustar
+
 character (64) :: fname_hetero
 
 if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
@@ -516,9 +514,10 @@ use test_filtermodule
 implicit none
 
 integer:: jx,jy,i
-real(kind=rprec), dimension(ld,ny):: wt_avg,wq_avg,theta_avg,u1,v1
+real(kind=rprec), dimension(ld,ny):: wt_avg,wtv_avg,theta_avg,u1,v1
 real(kind=rprec), dimension(nx,ny):: x,x0,x0s,zeta,zeta0,zeta0s,u_avg
-real(kind=rprec):: g_,wt_,wq_,ustar_,theta_,L_,zo_,wstar_avg
+real(kind=rprec):: g_, wt_, wtv_, ustar_, theta_, thetav_, L_, L2_, zo_,ustar_avg_time
+real(kind=rprec)::ustar_time, q_time, theta_time, theta_v_time
 real(kind=rprec),save:: obuk_L,obuk_ustar,obuk_phi_m,obuk_phi_h,obuk_psi_m   
 real(kind=rprec),save:: obuk_wt_sfc,obuk_psi_h,obuk_zo,obuk_wstar   
 
@@ -538,6 +537,7 @@ real(kind=rprec),save:: obuk_wt_sfc,obuk_psi_h,obuk_zo,obuk_wstar
     psi_h0=0._rprec
         if (.not. initsc) then
         sgs_t3(1:nx,1:ny,1)=wt_s(1:nx,1:ny)/(u_star*T_scale)
+        sgs_q3(1:nx,1:ny,1)=wq_s(1:nx,1:ny)/(u_star*q_scale)
         end if
    end if
 
@@ -546,13 +546,19 @@ real(kind=rprec),save:: obuk_wt_sfc,obuk_psi_h,obuk_zo,obuk_wstar
 
 theta_avg=theta(:,:,1)*(1+0.61_rprec*0.001_rprec*qmix(:,:,1)*q_scale) 
 wt_avg=sgs_t3(:,:,1) ! We need only the surface flux - defined by sgs
+wtv_avg=sgs_t3(:,:,1) + 0.61_rprec*theta(:,:,1)* &
+                        (0.001_rprec*q_scale*sgs_q3(:,:,1))
 zo_=exp(sum(dlog(zo(1:nx,1:ny)))/float(nx*ny))
 
 ! averages over x-y plane @ z = 1
 wt_=sum(sgs_t3(1:nx,1:ny,1))/float(nx*ny)
+wtv_=sum(wtv_avg(1:nx,1:ny))/float(nx*ny)
+
 ustar_=sum(sqrt(u(1:nx,1:ny,1)**2+v(1:nx,1:ny,1)**2))/float(nx*ny)*vonK/&
 (dlog(0.5_rprec*dz/zo_)-sum(psi_m(1:nx,1:ny))/float(nx*ny)+sum(psi_m0(1:nx,1:ny))/float(nx*ny))
-theta_=sum(theta_avg(1:nx,1:ny))/float(nx*ny)
+
+theta_=sum(theta(1:nx,1:ny,1))/float(nx*ny)
+thetav_=sum(theta_avg(1:nx,1:ny))/float(nx*ny)
 
 
   u1=u(:,:,1)
@@ -564,9 +570,8 @@ if (patch_flag==1) then
   do jx=1,nx
     do jy=1,ny
       u_avg(jx,jy)=sqrt(u1(jx,jy)**2+v1(jx,jy)**2) 
-      wt_avg(jx,jy)=sgs_t3(jx,jy,1)
       ustar_avg(jx,jy)=u_avg(jx,jy)*vonK/(dlog(0.5_rprec*dz/zo(jx,jy))-psi_m(jx,jy)+psi_m0(jx,jy))
-      theta_avg(jx,jy)=theta_
+    
     end do
   end do
 end if
@@ -574,29 +579,29 @@ end if
 
    do jx=1,nx
    do jy=1,ny
-    L(jx,jy)=-ustar_avg(jx,jy)**3/(vonk*(g_/theta_avg(jx,jy))*wt_avg(jx,jy))
+    L(jx,jy)=-ustar_avg(jx,jy)**3/(vonk*(g_/theta_)*wtv_avg(jx,jy))
     zeta(jx,jy)=0.5_rprec*dz/L(jx,jy)
     zeta0(jx,jy)=zo(jx,jy)/L(jx,jy)
     zeta0s(jx,jy)=z_os(jx,jy)/L(jx,jy)
     
-      if (zeta(jx,jy)<-20.0_rprec) then
-              zeta(jx,jy)=-20.0_rprec
+      if (zeta(jx,jy)<-30.0_rprec) then
+              zeta(jx,jy)=-30.0_rprec
       end if
 
       if (zeta(jx,jy)>2.0_rprec) then
               zeta(jx,jy)=2.0_rprec
       end if
 
-      if (zeta0(jx,jy)<-20.0_rprec) then
-              zeta0(jx,jy)=-20.0_rprec
+      if (zeta0(jx,jy)<-30.0_rprec) then
+              zeta0(jx,jy)=-30.0_rprec
       end if
 
       if (zeta0(jx,jy)>2.0_rprec) then
               zeta0(jx,jy)=2.0_rprec
       end if
       
-      if (zeta0s(jx,jy)<-20.0_rprec) then
-              zeta0s(jx,jy)=-20.0_rprec
+      if (zeta0s(jx,jy)<-30.0_rprec) then
+              zeta0s(jx,jy)=-30.0_rprec
       end if
 
       if (zeta0s(jx,jy)>2.0_rprec) then
@@ -646,25 +651,39 @@ end if
   end do
   end do
 
-  L_=-(ustar_**3)/(vonk*(g_/theta_)*wt_)
-  wstar_avg=sign((g_/theta_*abs(wt_))**(1./3.),wt_)
-
+  
+  ustar_avg_time = sum(ustar_avg(:,:))/float(nx*ny)
+  ustar_time= ((sum(txz(1:nx,1:ny,1))/float(nx*ny))**2 + &
+                    (sum(tyz(1:nx,1:ny,1))/float(nx*ny))**2)**(0.25)
+  theta_time = theta_
+  theta_v_time = thetav_
+  q_time = sum(qmix(1:nx,1:ny,1))/float(nx*ny)
+  L_ = -(ustar_**3)/(vonk*(g_/theta_)*wtv_)
+  L2_ = sum(L(:,:))/float(nx*ny)
+  
 ! SKS
   if (mod(jt,100) == 0) then     ! 100 because wbase = 100
 
  
-  write (6,7780) L_*z_i, ustar_*u_star, theta_*T_scale, wstar_avg*u_star, &
-                (dz/2)/L_, wt_*u_star*T_scale
+  write (6,7780) L_*z_i,L2_*z_i,ustar_*u_star,ustar_avg_time*u_star, &
+                    theta_*T_scale, thetav_*T_scale,(dz/2)/L_
 end if
 
-7780 format ('L(m),ustar(m/s),thetav_1(K),wstar(m/s),z/L,wt_s(Km/s):',&
-(6(1x,F15.7)))
+7780 format ('L_avg(m),L_local(m),us_avg(m/s),us_loc(m/s),theta_1(K),thetav_1(K),z/Lavg:',&
+(7(1x,F15.7)))
 
 !-------------------- OUTPUT ------------------------------
 ! Output the heat flux time series to a file to be used later
-!    open (unit=47,file=path//'output/WT_sfc_tseries.out',status="unknown",position="append")
-!    write(47,5168) (jt_total+1)*dt,wt_
- !   close(47)
+
+if (mod(jt_total,c_count)==0) then 
+ open (unit=9334,file=path//'output/tseries.out',status="unknown",position="append")
+    write(9334,5168) jt_total, L_*z_i,L2_*z_i,ustar_*u_star,ustar_avg_time*u_star, &
+                    theta_*T_scale, thetav_*T_scale, q_time*q_scale
+    close(9334)
+    
+    end if
+    
+5168     format(1400(E15.6))
 !----------------------------------------------------------
 
   return

@@ -4,17 +4,16 @@ use param
 use sim_param
 use io,only:openfiles,output_loop,output_final,inflow_write,avg_stats
 use output_slices,only:write_slices
-!use output_slice, only: output_slice_loop
 use fft
-
 use immersedbc
 use test_filtermodule
 use topbc,only:setsponge,sponge
-use bottombc,only:num_patch,avgpatch,patches,wt_s,wq_s
+use bottombc,only:wt_s,wq_s,patches
 use scalars_module,only:beta_scal,obukhov,theta_all_in_one,RHS_T,RHS_Tf
 use scalars_module_q,only:q_all_in_one,RHS_q,RHS_qf
+use scalars_module_co,only:co_all_in_one,RHS_co,RHS_cof
 use atm_thermodynamics,only:thermo
-use scalars_module2,only:patch_or_remote,timestep_conditions
+use scalars_module2,only:timestep_conditions
 $if ($LVLSET)
   use level_set, only : level_set_init, level_set_cylinder_CD,  &
                         level_set_smooth_vel
@@ -36,26 +35,28 @@ $if ($MPI)
   integer :: ip, np, coords(1)
 $endif
 
-real(kind=rprec) rmsdivvel,ke,kestor,testu   
-real(kind=rprec),dimension(nz)::u_ndim
-! SKS
-! real(kind=rprec),dimension(ld,ny,nz)::S_hat,Pr_0
-! Dont know why these are required !
-! SKS
+$if ($MPI)
+  !--this dimensioning adds a ghost layer for finite differences
+  !--its simpler to have all arrays dimensioned the same, even though
+  !--some components do not need ghost layer
+  $define $lbz 0
+$else
+  $define $lbz 1
+$endif
+
+real(rprec),allocatable,dimension(:,:,:)::drag_coeff
+real(kind=rprec),allocatable,dimension(:,:,:)::ug,vg,a_z
+real(kind=rprec),dimension(1:((nz-1)*nproc))::a_z_profile
+
+real(kind=rprec):: rmsdivvel,ke,kestor,testu   
 real(kind=rprec)::const,tt,omega
-real (rprec) :: force
-real (rprec) :: ug_time_factor,ug_period1,ug_period2,ug_period3,ug_period4
+real (rprec):: force
+
 real(kind=rprec),dimension(4)::timestep_vars
  
-! SKS
 integer::counter=0,plot_count=0
-! SKS
+
 !---------------------------------------------------------------------
-
-!call read_namelist
-
-
-
 
 
 $if ($MPI)
@@ -97,10 +98,6 @@ $if ($MPI)
 
   write (chcoord, '(a,i0,a)') '(', coord, ')'  !--() make easier to use
 
-!-----------------------
-call read_namelist
-!---------------------------
-
   !--rank->coord and coord->rank conversions
   do ip = 0, np-1
     call mpi_cart_rank (comm, (/ ip /), rank_of_coord(ip), ierr)
@@ -136,15 +133,43 @@ $else
 
 $endif
 
+!-----------------------
+call read_namelist
+!---------------------------
+
+! -------- initialize time -----------
 tt=0
+!----------------------------
 
-!--only coord 0 needs to do this since at the bottom
-!--roughness information then needs to be broadcast
-!if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
+if( .not. allocated(ug)) allocate(ug(ld,ny,1:((nz-1)*nproc)))
+if( .not. allocated(vg)) allocate(vg(ld,ny,1:((nz-1)*nproc)))
+if( .not. allocated(a_z)) allocate(a_z(ld,ny,1:((nz-1)*nproc)))
+if( .not. allocated(drag_coeff)) allocate(drag_coeff(ld,ny,$lbz:nz))
+
+! Assign geostrophic winds
+Nzz=(nz-1)*nproc
+  do k=1,Nzz
+            ug(:,:,k)=ug0/u_star
+            vg(:,:,k)=vg0/u_star
+  end do
+
+! ------------- read lad profile -----------------
+open(unit=1007,file='./a_z_prof24.dat',status='unknown')
+Nzz=(nz-1)*nproc
+  do k_global=1,Nzz
+
+      read(1007,*) a_z_profile(k_global)
+      a_z(:,:,k_global)=z_i*a_z_profile(k_global)
+  end do
+      close(1007)
+!--------------------------------------------------------
+! surface BCs in bottombc
 call patches ()
-!end if
+!-----------------------
 
+! initialize velocity and/or scalar fields (or read from file) in initial.f90
 call initial()
+!-----------------------------------------
 
 !--could move this into something like initial ()
 $if ($LVLSET)
@@ -166,14 +191,21 @@ call init_fft()
   call test_filter_init (2._rprec * filter_size, G_test)
 
 if (model == 3 .or. model == 5 .or. model == 6 .or. model == 7) then  !--scale dependent dynamic
-! if (model == 3 .or. model == 5) then  !--scale dependent dynamic
   call test_filter_init (4._rprec * filter_size, G_test_test)
 end if
 
 if (ubc == 1) then
     call setsponge()
-!   print *,'sponge value calculated for damping layer'
+    
+    if (coord == 0) then
+    print *,'sponge value calculated for damping layer'
+    end if
 else
+
+    if (coord == 0) then
+    print *,'No sponge set'
+    end if
+    
     sponge=0._rprec
 end if
 
@@ -181,10 +213,9 @@ if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 0)) then
   print *, 'Number of timesteps', nsteps
   print *, 'dt = , dt_dim = ', dt, dt_dim
   print *, 'Nx, Ny, Nz, Nz_total ', nx, ny, nz, nz_tot
-  print *, 'Lx, Ly, Lz = ', L_x, L_y, L_z
+  print *, 'Lx, Ly, Lz, Lz_total = ', L_x, L_y, L_z, L_z*nproc
   
   if (USE_MPI) print *, 'Number of processes = ', nproc
- ! print *, 'Number of patches = ', num_patch
   print *, 'sampling stats every ', c_count, ' timesteps'
   print *, 'writing stats every ', p_count, ' timesteps'
   if (molec) print*, 'molecular viscosity (dimensional) ', nu_molec
@@ -202,15 +233,6 @@ do jt=1,nsteps
   end if
 
   tt=tt+dt      ! advance total time
-
-Nzz=(nz-1)*nproc
-  do k=1,Nzz
-          ! Could also go from this way : 
-          !  k_global = k + coord*(nz-1)
-
-            ug(:,:,k)=ug_dim/u_star
-            vg(:,:,k)=0.0_rprec
-  end do
 
      RHSx_f = RHSx
      RHSy_f = RHSy
@@ -275,6 +297,7 @@ Nzz=(nz-1)*nproc
   if(S_FLAG.and.(jt.GE.SCAL_INIT))  then
      call theta_all_in_one
      call q_all_in_one
+     call co_all_in_one
      call thermo()
   else
      beta_scal=0._rprec
@@ -333,6 +356,18 @@ Nzz=(nz-1)*nproc
                          ! coriol * u(:, :, 1:nz-1) + ug_time_factor*coriol * ug
   end if
 
+
+
+  if (canopy_forcing) then
+
+          call canopy_drag(a_z,drag_coeff,fu_c,fv_c,fw_c)      ! provides the drag force for three components
+          C_d (:, :, 1:nz-1)=  drag_coeff (:, :, 1:nz-1)
+          RHSx(:, :, 1:nz-1) = RHSx(:, :, 1:nz-1) + fu_c(:,:,1:nz-1)
+          RHSy(:, :, 1:nz-1) = RHSy(:, :, 1:nz-1) + fv_c(:,:,1:nz-1)
+          RHSz(:, :, 1:nz-1) = RHSz(:, :, 1:nz-1) + fw_c(:,:,1:nz-1)
+  end if
+  
+  
 !XXXXXX%%%%%  Add damping terms to the momentum RHS %%%XXXXXXXXXXXX
   if (ubc==1 .and. damping_method==2) then !add damping terms to the momentum RHS
       do jz=1,nz-1 
@@ -438,6 +473,18 @@ Nzz=(nz-1)*nproc
     call mpi_sendrecv (dvdz(1, 1, nz-1), ld*ny, MPI_RPREC, up, 5,  &
                        dvdz(1, 1, 0), ld*ny, MPI_RPREC, down, 5,   &
                        comm, status, ierr)
+    call mpi_sendrecv (fu_c(1, 1, nz-1), ld*ny, MPI_RPREC, up, 727,  &
+                       fu_c(1, 1, 0), ld*ny, MPI_RPREC, down, 727,   &
+                       comm, status, ierr)
+    call mpi_sendrecv (fv_c(1, 1, nz-1), ld*ny, MPI_RPREC, up, 728,  &
+                       fv_c(1, 1, 0), ld*ny, MPI_RPREC, down, 728,   &
+                       comm, status, ierr)
+    call mpi_sendrecv (fw_c(1, 1, nz-1), ld*ny, MPI_RPREC, up, 729,  &
+                       fw_c(1, 1, 0), ld*ny, MPI_RPREC, down, 729,   &
+                       comm, status, ierr)
+    call mpi_sendrecv (C_d(1, 1, nz-1), ld*ny, MPI_RPREC, up, 730,  &
+                       C_d(1, 1, 0), ld*ny, MPI_RPREC, down, 730,   &
+                       comm, status, ierr)
 
 
   $endif
@@ -455,7 +502,7 @@ Nzz=(nz-1)*nproc
     call rmsdiv (rmsdivvel)
     call timestep_conditions(timestep_vars(1),timestep_vars(2),timestep_vars(3),timestep_vars(4))
 !   timestep_vars(1) is CFL and timestep_vars(2) is viscous stability limit
-     if ((timestep_vars(1) .GT. 0.1_rprec) .OR. (timestep_vars(1) .LT. 0.0_rprec) ) then
+     if ((timestep_vars(1) .GT. 0.15_rprec) .OR. (timestep_vars(1) .LT. 0.0_rprec) ) then
     write (*, *) 'CFLu has exceeded 0.1 or became negative and is equal to = ', timestep_vars(1)
       
     stop
@@ -497,7 +544,7 @@ Nzz=(nz-1)*nproc
 !-------------------------------------------------
 
 
-    if ((jt_total .GE. 80000) .AND. (jt_total .LE. 100000) .AND. modulo (jt, 20) == 0) then
+    if ((jt_total .GE. 50000) .AND. (jt_total .LE. 70000) .AND. modulo (jt, 40) == 0) then
 
             call write_slices()
 

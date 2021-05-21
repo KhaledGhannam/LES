@@ -39,26 +39,26 @@ real(kind=rprec),dimension(nx,ny)::u_slice1_xy,q_slice1_xy, w_slice1_xy,theta_sl
 real(kind=rprec),dimension(nx,ny)::u_slice2_xy,q_slice2_xy, w_slice2_xy,theta_slice2_xy
 real(kind=rprec),dimension(nx,ny)::u_slice3_xy,q_slice3_xy, w_slice3_xy,theta_slice3_xy
 real(kind=rprec),dimension(nx,ny)::u_slice4_xy,q_slice4_xy, w_slice4_xy,theta_slice4_xy
+real(kind=rprec),dimension(nx,ny)::u_slice5_xy, w_slice5_xy
 
 real(kind=rprec),dimension(:,:),allocatable::slice_out,slicey_out
 real(kind=rprec),dimension(nx,ny)::arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8
 
 do jz=1,nz-1
 
-    ! if((jz .eq. 1) .AND. ((.not. USE_MPI) .or. (USE_MPI .and. coord .eq. 0))) then
-     !    arg1(1:nx,1:ny)=0.25_rprec*(w(1:nx,1:ny,1)-sum(w(1:nx,1:ny,1))/float(nx*ny) )
-     !    arg2(1:nx,1:ny)=u(1:nx,1:ny,1)-sum(u(1:nx,1:ny,1))/float(nx*ny)
-     !    arg3(1:nx,1:ny)=qmix(1:nx,1:ny,1)-sum(qmix(1:nx,1:ny,1))/float(nx*ny)
-     !    arg4(1:nx,1:ny)=theta(1:nx,1:ny,1)-sum(theta(1:nx,1:ny,1))/float(nx*ny)
+     if((jz .eq. 1) .AND. ((.not. USE_MPI) .or. (USE_MPI .and. coord .eq. 0))) then
+         arg1(1:nx,1:ny)=0.25_rprec*(w(1:nx,1:ny,1)-sum(w(1:nx,1:ny,1))/float(nx*ny) )
+         arg2(1:nx,1:ny)=u(1:nx,1:ny,1)-sum(u(1:nx,1:ny,1))/float(nx*ny)
+         arg3(1:nx,1:ny)=qmix(1:nx,1:ny,1)-sum(qmix(1:nx,1:ny,1))/float(nx*ny)
+         arg4(1:nx,1:ny)=theta(1:nx,1:ny,1)-sum(theta(1:nx,1:ny,1))/float(nx*ny)
 
-      !  else
-        arg1(1:nx,1:ny)=w(1:nx,1:ny,jz)-sum(w(1:nx,1:ny,jz))/float(nx*ny)
-
-        arg2(1:nx,1:ny)=u(1:nx,1:ny,jz)-sum(u(1:nx,1:ny,jz))/float(nx*ny)
-        arg3(1:nx,1:ny)=qmix(1:nx,1:ny,jz)-sum(qmix(1:nx,1:ny,jz))/float(nx*ny)
-        arg4(1:nx,1:ny)=theta(1:nx,1:ny,jz)-sum(theta(1:nx,1:ny,jz))/float(nx*ny)
+        else
+         arg1(1:nx,1:ny)=w(1:nx,1:ny,jz)-sum(w(1:nx,1:ny,jz))/float(nx*ny) 
+         arg2(1:nx,1:ny)=u(1:nx,1:ny,jz)-sum(u(1:nx,1:ny,jz))/float(nx*ny)
+         arg3(1:nx,1:ny)=qmix(1:nx,1:ny,jz)-sum(qmix(1:nx,1:ny,jz))/float(nx*ny)
+         arg4(1:nx,1:ny)=theta(1:nx,1:ny,jz)-sum(theta(1:nx,1:ny,jz))/float(nx*ny)
         
-     !   end if
+        end if
 
      w_slice1_xz(1:nx,jz)=arg1(1:nx,90)
      u_slice1_xz(1:nx,jz)=arg2(1:nx,90)
@@ -114,120 +114,114 @@ do jz=1,nz-1
               close(2294)
 
 
-              open(unit=2295,file=path//'output/q_slice1_xy_coord1.out',status="unknown",position="append")
-                do jy=1,ny
-                  write(2295,7185) (q_slice1_xy(i,jy),i=1,nx)
-                end do
-              close(2295)
+ !             open(unit=2295,file=path//'output/q_slice1_xy_coord1.out',status="unknown",position="append")
+ !               do jy=1,ny
+ !                 write(2295,7185) (q_slice1_xy(i,jy),i=1,nx)
+ !               end do
+ !             close(2295)
 
 
-              open(unit=2296,file=path//'output/theta_slice1_xy_coord1.out',status="unknown",position="append")
-                do jy=1,ny
-                  write(2296,7185) (theta_slice1_xy(i,jy),i=1,nx)
-                end do
-              close(2296)
+  !            open(unit=2296,file=path//'output/theta_slice1_xy_coord1.out',status="unknown",position="append")
+  !              do jy=1,ny
+  !                write(2296,7185) (theta_slice1_xy(i,jy),i=1,nx)
+  !              end do
+  !            close(2296)
 
               
-              else if (coord==8) then
+              else if (coord==4) then
               w_slice2_xy(1:nx,1:ny)=arg1(1:nx,1:ny)
               u_slice2_xy(1:nx,1:ny)=arg2(1:nx,1:ny)
               q_slice2_xy(1:nx,1:ny)=arg3(1:nx,1:ny)
               theta_slice2_xy(1:nx,1:ny)=arg4(1:nx,1:ny)
 
-              open(unit=2623,file=path//'output/u_slice2_xy_coord8.out',status="unknown",position="append")
+              open(unit=2623,file=path//'output/u_slice2_xy_coord4.out',status="unknown",position="append")
                 do jy=1,ny
                   write(2623,7185) (u_slice2_xy(i,jy),i=1,nx)
                 end do
               close(2623)
 
 
-              open(unit=2624,file=path//'output/w_slice2_xy_coord8.out',status="unknown",position="append")
+              open(unit=2624,file=path//'output/w_slice2_xy_coord4.out',status="unknown",position="append")
                 do jy=1,ny
                   write(2624,7185) (w_slice2_xy(i,jy),i=1,nx)
                 end do
               close(2624)
 
 
-              open(unit=2625,file=path//'output/q_slice2_xy_coord8.out',status="unknown",position="append")
-                do jy=1,ny
-                  write(2625,7185) (q_slice2_xy(i,jy),i=1,nx)
-                end do
-              close(2625)
+     !         open(unit=2625,file=path//'output/q_slice2_xy_coord8.out',status="unknown",position="append")
+     !           do jy=1,ny
+     !             write(2625,7185) (q_slice2_xy(i,jy),i=1,nx)
+     !           end do
+     !         close(2625)
 
 
-              open(unit=2626,file=path//'output/theta_slice2_xy_coord8.out',status="unknown",position="append")
-                do jy=1,ny
-                  write(2626,7185) (theta_slice2_xy(i,jy),i=1,nx)
-                end do
-              close(2626)
+      !        open(unit=2626,file=path//'output/theta_slice2_xy_coord8.out',status="unknown",position="append")
+      !          do jy=1,ny
+      !            write(2626,7185) (theta_slice2_xy(i,jy),i=1,nx)
+      !          end do
+      !        close(2626)
 
               
-              else if (coord==45) then
+              else if (coord==7) then
               w_slice3_xy(1:nx,1:ny)=arg1(1:nx,1:ny)
               u_slice3_xy(1:nx,1:ny)=arg2(1:nx,1:ny)
               q_slice3_xy(1:nx,1:ny)=arg3(1:nx,1:ny)
               theta_slice3_xy(1:nx,1:ny)=arg4(1:nx,1:ny)
 
-              open(unit=2823,file=path//'output/u_slice3_xy_coord45.out',status="unknown",position="append")
+              open(unit=2823,file=path//'output/u_slice3_xy_coord7.out',status="unknown",position="append")
                 do jy=1,ny
                   write(2823,7185) (u_slice3_xy(i,jy),i=1,nx)
                 end do
               close(2823)
 
 
-              open(unit=2824,file=path//'output/w_slice3_xy_coord45.out',status="unknown",position="append")
+              open(unit=2824,file=path//'output/w_slice3_xy_coord7.out',status="unknown",position="append")
                 do jy=1,ny
                   write(2824,7185) (w_slice3_xy(i,jy),i=1,nx)
                 end do
               close(2824)
 
-
-              open(unit=2825,file=path//'output/q_slice3_xy_coord45.out',status="unknown",position="append")
-                do jy=1,ny
-                  write(2825,7185) (q_slice3_xy(i,jy),i=1,nx)
-                end do
-              close(2825)
-
-
-              open(unit=2826,file=path//'output/theta_slice3_xy_coord45.out',status="unknown",position="append")
-                do jy=1,ny
-                  write(2826,7185) (theta_slice3_xy(i,jy),i=1,nx)
-                end do
-              close(2826)
              
              
-            else if (coord==120) then
+            else if (coord==10) then
               w_slice4_xy(1:nx,1:ny)=arg1(1:nx,1:ny)
               u_slice4_xy(1:nx,1:ny)=arg2(1:nx,1:ny)
               q_slice4_xy(1:nx,1:ny)=arg3(1:nx,1:ny)
               theta_slice4_xy(1:nx,1:ny)=arg4(1:nx,1:ny)
 
-              open(unit=2827,file=path//'output/u_slice4_xy_coord120.out',status="unknown",position="append")
+              open(unit=2827,file=path//'output/u_slice4_xy_coord10.out',status="unknown",position="append")
                 do jy=1,ny
                   write(2827,7185) (u_slice4_xy(i,jy),i=1,nx)
                 end do
               close(2827)
 
 
-              open(unit=2828,file=path//'output/w_slice4_xy_coord120.out',status="unknown",position="append")
+              open(unit=2828,file=path//'output/w_slice4_xy_coord10.out',status="unknown",position="append")
                 do jy=1,ny
                   write(2828,7185) (w_slice4_xy(i,jy),i=1,nx)
                 end do
               close(2828)
+              
+              
+            else if (coord==13) then
+              w_slice5_xy(1:nx,1:ny)=arg1(1:nx,1:ny)
+              u_slice5_xy(1:nx,1:ny)=arg2(1:nx,1:ny)
+              
 
-
-              open(unit=2829,file=path//'output/q_slice4_xy_coord120.out',status="unknown",position="append")
+              open(unit=2829,file=path//'output/u_slice5_xy_coord13.out',status="unknown",position="append")
                 do jy=1,ny
-                  write(2829,7185) (q_slice4_xy(i,jy),i=1,nx)
+                  write(2829,7185) (u_slice5_xy(i,jy),i=1,nx)
                 end do
               close(2829)
 
 
-              open(unit=2830,file=path//'output/theta_slice4_xy_coord120.out',status="unknown",position="append")
+              open(unit=2830,file=path//'output/w_slice5_xy_coord13.out',status="unknown",position="append")
                 do jy=1,ny
-                  write(2830,7185) (theta_slice4_xy(i,jy),i=1,nx)
+                  write(2830,7185) (w_slice5_xy(i,jy),i=1,nx)
                 end do
               close(2830)
+              
+              
                
               end if
               
@@ -252,23 +246,23 @@ do jz=1,nz-1
         
         deallocate(slice_out)
         
-        allocate(slicey_out(1:ny,1:(nz_tot-1)));
-        call collocate_slicesy(u_slice1_yz,slicey_out,8052,'u_slice1')
-        call collocate_slicesy(w_slice1_yz,slicey_out,8053,'w_slice1')
-        call collocate_slicesy(q_slice1_yz,slicey_out,8054,'q_slice1')
-        call collocate_slicesy(theta_slice1_yz,slicey_out,8055,'theta_slice1')
+!        allocate(slicey_out(1:ny,1:(nz_tot-1)));
+!        call collocate_slicesy(u_slice1_yz,slicey_out,8052,'u_slice1')
+!        call collocate_slicesy(w_slice1_yz,slicey_out,8053,'w_slice1')
+!        call collocate_slicesy(q_slice1_yz,slicey_out,8054,'q_slice1')
+!        call collocate_slicesy(theta_slice1_yz,slicey_out,8055,'theta_slice1')
         
-        call collocate_slicesy(u_slice2_yz,slicey_out,8056,'u_slice2')
-        call collocate_slicesy(w_slice2_yz,slicey_out,8057,'w_slice2')
-        call collocate_slicesy(q_slice2_yz,slicey_out,8058,'q_slice2')
-        call collocate_slicesy(theta_slice2_yz,slicey_out,8059,'theta_slice2')
+!        call collocate_slicesy(u_slice2_yz,slicey_out,8056,'u_slice2')
+!        call collocate_slicesy(w_slice2_yz,slicey_out,8057,'w_slice2')
+!        call collocate_slicesy(q_slice2_yz,slicey_out,8058,'q_slice2')
+!        call collocate_slicesy(theta_slice2_yz,slicey_out,8059,'theta_slice2')
         
-        call collocate_slicesy(u_slice3_yz,slicey_out,8060,'u_slice3')
-        call collocate_slicesy(w_slice3_yz,slicey_out,8061,'w_slice3')
-        call collocate_slicesy(q_slice3_yz,slicey_out,8062,'q_slice3')
-        call collocate_slicesy(theta_slice3_yz,slicey_out,8063,'theta_slice3')
+!        call collocate_slicesy(u_slice3_yz,slicey_out,8060,'u_slice3')
+!        call collocate_slicesy(w_slice3_yz,slicey_out,8061,'w_slice3')
+!        call collocate_slicesy(q_slice3_yz,slicey_out,8062,'q_slice3')
+!        call collocate_slicesy(theta_slice3_yz,slicey_out,8063,'theta_slice3')
 
-        deallocate(slicey_out)
+ !       deallocate(slicey_out)
         
 7185     format(1400(E14.5))
 
@@ -314,7 +308,7 @@ $endif
            end do
         close(file_ind)
   end if
-7307     format(1400(E14.5))
+7307     format(1400(E12.5))
 
 end subroutine collocate_slices
 ! -----------------------------------------------
