@@ -78,11 +78,11 @@ if ((.not. USE_MPI) .or. (USE_MPI .and. coord == 1)) then
         
         arg17(1:nx,1:ny)=1.5_rprec*dz*z_i + (cp/g)*(actual_T(1:nx,1:ny,1)*T_scale -55 - &
                              (1/(actual_T(1:nx,1:ny,1)*T_scale-55) - &
-                             dlog(rel_hum_q(1:nx,1:nx,1))/2840)**(-1.0_rprec) )
+                             dlog(rel_hum_q(1:nx,1:ny,1))/2840)**(-1.0_rprec) )
                              
         zlcl_parcel_ave2=1.5_rprec*dz*z_i + (cp/g)*(sum(actual_T(1:nx,1:ny,1))/float(nx*ny)*T_scale -55 - &
                              (1/(sum(actual_T(1:nx,1:ny,1))/float(nx*ny)*T_scale-55) - &
-                             dlog(sum(rel_hum_q(1:nx,1:nx,1))/float(nx*ny))/2840)**(-1.0_rprec) )
+                             dlog(sum(rel_hum_q(1:nx,1:ny,1))/float(nx*ny))/2840)**(-1.0_rprec) )
                              
         zlcl_parcel_ave=sum(arg17(1:nx,1:ny))/float(nx*ny)
 
